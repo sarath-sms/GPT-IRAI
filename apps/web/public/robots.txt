@@ -1,0 +1,10 @@
+# Allow all search engines to crawl the main site
+User-agent: *
+Allow: /
+
+# Disallow temporary or build-related folders
+Disallow: /service-worker.js
+Disallow: /workbox-*
+
+# Sitemap (optional, if you add one later)
+# Sitemap: https://iraitchi.com/sitemap.xml

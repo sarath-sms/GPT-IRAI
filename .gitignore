@@ -1,0 +1,86 @@
+# ===== FRONTEND =====
+frontend/node_modules/
+frontend/build/
+frontend/dist/
+frontend/.cache/
+frontend/.parcel-cache/
+frontend/.next/
+frontend/.eslintcache
+
+# Frontend environment files
+frontend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.production.local
+frontend/.env.test.local
+
+# PWA assets generated during build
+frontend/public/service-worker.js
+frontend/public/sw.js
+frontend/public/precache-manifest.*
+frontend/public/workbox-*.js
+frontend/public/manifest.json
+
+# ===== BACKEND =====
+backend/node_modules/
+backend/dist/
+backend/build/
+backend/.env
+backend/.env.local
+backend/.env.development.local
+backend/.env.production.local
+backend/.env.test.local
+
+# for PWA
+apps/*/node_modules/
+apps/*/dist/
+apps/*/.env*
+apps/*/.cache/
+apps/*/.vite/
+apps/*/pnpm-lock.yaml
+
+# ===== COMMON IGNORE =====
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# IDE / Editor folders
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Temporary and cache files
+*.tmp
+*.swp
+*.swo
+*.bak
+*.orig
+tmp/
+uploads/
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Build caches
+.cache/
+.eslintcache
+
+# Deployment / host-specific folders
+.vercel/
+firebase-debug.log
+functions/lib/
+functions/node_modules/
+
+# Misc
+*.tgz
+*.zip
+*.tsbuildinfo

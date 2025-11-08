@@ -1,0 +1,29 @@
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import './index.css'
+import { ThemeProvider } from 'styled-components'
+import { GlobalStyle } from './styles/GlobalStyle'
+import { theme } from './styles/theme'
+import App from './App.tsx'
+
+// ✅ Import the PWA virtual module provided by Vite
+import { registerSW } from 'virtual:pwa-register'
+
+// ✅ Register your service worker
+registerSW({
+  onNeedRefresh() {
+    console.log('🔄 New content available! Please refresh the page.')
+  },
+  onOfflineReady() {
+    console.log('✅ App ready to work offline.')
+  },
+})
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <ThemeProvider theme={theme}>
+      <GlobalStyle />
+      <App />
+    </ThemeProvider>
+  </StrictMode>,
+)
