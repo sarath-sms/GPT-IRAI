@@ -21,15 +21,15 @@ frontend/public/precache-manifest.*
 frontend/public/workbox-*.js
 frontend/public/manifest.json
 
-# ===== BACKEND =====
-backend/node_modules/
-backend/dist/
-backend/build/
-backend/.env
-backend/.env.local
-backend/.env.development.local
-backend/.env.production.local
-backend/.env.test.local
+# ===== server =====
+server/node_modules/
+server/dist/
+server/build/
+server/.env
+server/.env.local
+server/.env.development.local
+server/.env.production.local
+server/.env.test.local
 
 # for PWA
 apps/*/node_modules/
