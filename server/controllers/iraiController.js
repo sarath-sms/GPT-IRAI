@@ -46,12 +46,13 @@ export const checkMobNo = async (req, res) => {
     await Shop.updateOne({ _id: shop._id }, { $addToSet: { customers: user._id } });
 
     // 📲 send OTP
-    const otpSent = await sendOtp(otp, mobile);
-    if (!otpSent) return res.status(500).json({ msg: "Failed to send OTP" });
+    // const otpSent = await sendOtp(otp, mobile);
+    // if (!otpSent) return res.status(500).json({ msg: "Failed to send OTP" });
 
     res.status(200).json({
       msg: "OTP sent successfully!",
       data: {
+        otp,
         name: user.name,
         mobile: user.mobile,
         pincode: user.pincode,

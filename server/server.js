@@ -6,6 +6,9 @@ import adminRoutes from "./routes/adminRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
 import shopRoutes from "./routes/shopRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import orderRoutes from "./routes/orderRoutes.js";
+import driverRoutes from "./routes/driverRoutes.js";
+import driverSelfRoutes from "./routes/driverSelfRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -25,6 +28,10 @@ app.use("/api/superadmin", adminRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/shop", shopRoutes);
 app.use("/api/irai", userRoutes);
+app.use("/api/orders", orderRoutes);
+app.use("/api/drivers", driverRoutes);
+app.use("/api/driver", driverSelfRoutes);
+
 
 const PORT = process.env.PORT || 5000;
 mongoose

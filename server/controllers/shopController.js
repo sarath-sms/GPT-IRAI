@@ -1,4 +1,5 @@
 import Shop from "../models/Shop.js";
+import Driver from "../models/Driver.js";
 
 // 🔹 Create Shop
 export const createShop = async (req, res) => {
@@ -79,5 +80,51 @@ export const toggleShopStatus = async (req, res) => {
     res.status(200).json({ msg: `Shop is now ${shop.isOpen ? "Open ✅" : "Closed 🔒"}`, shop });
   } catch (err) {
     res.status(500).json({ msg: "Server error", error: err.message });
+  }
+};
+
+// 🔹 Link existing drivers to a shop
+export const linkDriversToShop = async (req, res) => {
+  try {
+    const { shopId, driverIds } = req.body;
+
+    const shop = await Shop.findById(shopId);
+    if (!shop) return res.status(404).json({ msg: "Shop not found" });
+
+    // Link drivers to shop
+    for (const driverId of driverIds) {
+      const driver = await Driver.findById(driverId);
+      if (driver) {
+        if (!driver.assignedPincodes.includes(shop.pincode)) {
+          driver.assignedPincodes.push(shop.pincode);
+          await driver.save();
+        }
+      }
+    }
+
+    shop.drivers = [...new Set([...shop.drivers, ...driverIds])];
+    await shop.save();
+
+    res.status(200).json({ msg: "Drivers linked to shop", shop });
+  } catch (error) {
+    console.error("❌ linkDriversToShop error:", error);
+    res.status(500).json({ msg: "Server error", error: error.message });
+  }
+};
+
+// 🔹 Link admins to a shop
+export const linkAdminsToShop = async (req, res) => {
+  try {
+    const { shopId, adminIds } = req.body;
+    const shop = await Shop.findById(shopId);
+    if (!shop) return res.status(404).json({ msg: "Shop not found" });
+
+    shop.admins = [...new Set([...shop.admins, ...adminIds])];
+    await shop.save();
+
+    res.status(200).json({ msg: "Admins linked to shop", shop });
+  } catch (error) {
+    console.error("❌ linkAdminsToShop error:", error);
+    res.status(500).json({ msg: "Server error", error: error.message });
   }
 };

@@ -6,17 +6,21 @@ import {
   updateShop,
   deleteShop,
   toggleShopStatus,
+  linkDriversToShop,
+  linkAdminsToShop,
 } from "../controllers/shopController.js";
-import { protect } from "../middleware/authMiddleware.js";
+import { authorizeRoles, protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
 // 🧠 All routes require Super Admin (protected)
-router.post("/create", protect, createShop);
-router.get("/", protect, getAllShops);
-router.get("/:id", protect, getShopById);
-router.patch("/:id", protect, updateShop);
-router.delete("/:id", protect, deleteShop);
-router.patch("/:id/toggle", protect, toggleShopStatus);
+router.post("/create", protect, authorizeRoles("superAdmin"), createShop);
+router.get("/", protect, authorizeRoles("superAdmin"), getAllShops);
+router.get("/:id", protect, authorizeRoles("superAdmin"), getShopById);
+router.patch("/:id", protect, authorizeRoles("superAdmin"), updateShop);
+router.delete("/:id", protect, authorizeRoles("superAdmin"), deleteShop);
+router.patch("/:id/toggle", protect, authorizeRoles("superAdmin", "admin"), toggleShopStatus);
 
+router.post("/link-drivers", protect, authorizeRoles("superAdmin"), linkDriversToShop);
+router.post("/link-admins", protect, authorizeRoles("superAdmin"), linkAdminsToShop);
 export default router;
