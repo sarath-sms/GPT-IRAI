@@ -49,8 +49,8 @@ export const category1 = [
     {
       id: "meat002",
       name: "Chicken Breast | Farm Fresh",
-      category: "meat",
-      subCategory: "poultry",
+      category: "poultry",
+      subCategory: "farm",
       image: "https://i.ibb.co/qFkFW4r/chicken.jpg",
       available: true,
       netWeight: "500g",

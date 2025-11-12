@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 
 // 🔹 Helper — Token generator
 const generateToken = (id, role) =>
-  jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: "24h" });
+  jwt.sign({ id, role }, process.env.JWT_SECRET);
 
 // 🔹 POST /api/admin/create — Create first super admin
 export const createSuperAdmin = async (req, res) => {

@@ -2,7 +2,7 @@ import Driver from "../models/Driver.js";
 import jwt from "jsonwebtoken";
 
 const generateToken = (id) =>
-  jwt.sign({ id, role: "driver" }, process.env.JWT_SECRET, { expiresIn: "24h" });
+  jwt.sign({ id, role: "driver" }, process.env.JWT_SECRET);
 
 // Driver login
 export const driverLogin = async (req, res) => {

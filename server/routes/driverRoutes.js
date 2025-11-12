@@ -1,20 +1,15 @@
 import express from "express";
-import {
-  createDriver,
-  getDrivers,
-  updateDriver,
-  deleteDriver,
-  assignOrderToDriver,
-} from "../controllers/driverController.js";
+import { driverLogin } from "../controllers/driverAuthController.js";
+import { getAssignedOrders, driverUpdateOrderStatus } from "../controllers/driverOrderController.js";
 import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// SuperAdmin Only
-router.post("/", protect, authorizeRoles("superAdmin"), createDriver);
-router.get("/", protect, authorizeRoles("superAdmin"), getDrivers);
-router.patch("/:id", protect, authorizeRoles("superAdmin"), updateDriver);
-router.delete("/:id", protect, authorizeRoles("superAdmin"), deleteDriver);
-router.post("/assign-orders", protect, authorizeRoles("superAdmin"), assignOrderToDriver);
+// 🔹 Driver login (public)
+router.post("/login", driverLogin);
+
+// 🔹 Assigned orders (protected)
+router.get("/orders", protect, authorizeRoles("driver"), getAssignedOrders);
+router.patch("/orders/:id/status", protect, authorizeRoles("driver"), driverUpdateOrderStatus);
 
 export default router;

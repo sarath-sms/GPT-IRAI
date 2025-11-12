@@ -1,0 +1,268 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+      "title": "Iraitchi API Documentation",
+      "version": "1.0.0",
+      "description": "Comprehensive API reference for Iraitchi backend — covering all roles and modules."
+    },
+    "tags": [
+      { "name": "SuperAdmin", "description": "SuperAdmin management APIs" },
+      { "name": "Admin", "description": "Admin-level operations" },
+      { "name": "User", "description": "Customer OTP and orders" },
+      { "name": "Driver", "description": "Driver operations and delivery status" },
+      { "name": "Shop", "description": "Shop management" },
+      { "name": "Product", "description": "Product catalog CRUD" }
+    ],
+    "paths": {
+      "/superadmin/create": {
+        "post": {
+          "tags": ["SuperAdmin"],
+          "summary": "Create a SuperAdmin",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "name": { "type": "string" },
+                    "mobile": { "type": "string" },
+                    "password": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "responses": { "201": { "description": "SuperAdmin created" } }
+        }
+      },
+      "/superadmin/login": {
+        "post": {
+          "tags": ["SuperAdmin"],
+          "summary": "Login SuperAdmin",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "mobile": { "type": "string" },
+                    "password": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "responses": { "200": { "description": "Login successful" } }
+        }
+      },
+      "/superadmin/admins": {
+        "post": {
+          "tags": ["SuperAdmin"],
+          "summary": "Create new admin",
+          "security": [{ "bearerAuth": [] }],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "name": { "type": "string" },
+                    "mobile": { "type": "string" },
+                    "password": { "type": "string" },
+                    "pincodes": {
+                      "type": "array",
+                      "items": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": { "201": { "description": "Admin created" } }
+        },
+        "get": {
+          "tags": ["SuperAdmin"],
+          "summary": "Get all admins",
+          "security": [{ "bearerAuth": [] }],
+          "responses": { "200": { "description": "List of admins" } }
+        }
+      },
+      "/admin/login": {
+        "post": {
+          "tags": ["Admin"],
+          "summary": "Admin login",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "mobile": { "type": "string" },
+                    "password": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "responses": { "200": { "description": "Login successful" } }
+        }
+      },
+      "/admin/assign-orders": {
+        "post": {
+          "tags": ["Admin"],
+          "summary": "Assign orders to driver",
+          "security": [{ "bearerAuth": [] }],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "driverId": { "type": "string" },
+                    "orderIds": {
+                      "type": "array",
+                      "items": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": { "200": { "description": "Orders assigned" } }
+        }
+      },
+      "/user/entry": {
+        "post": {
+          "tags": ["User"],
+          "summary": "Send OTP for user login/register",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "name": { "type": "string" },
+                    "mobile": { "type": "string" },
+                    "pincode": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "responses": { "200": { "description": "OTP sent" } }
+        }
+      },
+      "/user/verify": {
+        "post": {
+          "tags": ["User"],
+          "summary": "Verify OTP and login user",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "mobile": { "type": "string" },
+                    "otp": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "responses": { "200": { "description": "OTP verified" } }
+        }
+      },
+      "/driver/login": {
+        "post": {
+          "tags": ["Driver"],
+          "summary": "Driver login",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "mobile": { "type": "string" },
+                    "password": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "responses": { "200": { "description": "Login successful" } }
+        }
+      },
+      "/driver/orders": {
+        "get": {
+          "tags": ["Driver"],
+          "summary": "Get all assigned orders for driver",
+          "security": [{ "bearerAuth": [] }],
+          "responses": { "200": { "description": "List of assigned orders" } }
+        }
+      },
+      "/driver/orders/{id}/status": {
+        "patch": {
+          "tags": ["Driver"],
+          "summary": "Update order delivery status",
+          "security": [{ "bearerAuth": [] }],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": { "type": "string" },
+              "description": "Order ID"
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "status": { "type": "string" } }
+                }
+              }
+            }
+          },
+          "responses": { "200": { "description": "Status updated" } }
+        }
+      },
+      "/products": {
+        "get": {
+          "tags": ["Product"],
+          "summary": "Get all products",
+          "responses": { "200": { "description": "List of products" } }
+        },
+        "post": {
+          "tags": ["SuperAdmin"],
+          "summary": "Add new product",
+          "security": [{ "bearerAuth": [] }],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "name": { "type": "string" },
+                    "category": { "type": "string" },
+                    "price": { "type": "number" }
+                  }
+                }
+              }
+            }
+          },
+          "responses": { "201": { "description": "Product created" } }
+        }
+      }
+    }
+  }
+  

@@ -1,0 +1,2063 @@
+📁 apps/web/eslint.config.js
+----------------------------
+import js from '@eslint/js'
+import globals from 'globals'
+import reactHooks from 'eslint-plugin-react-hooks'
+import reactRefresh from 'eslint-plugin-react-refresh'
+import tseslint from 'typescript-eslint'
+import { defineConfig, globalIgnores } from 'eslint/config'
+
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      js.configs.recommended,
+      tseslint.configs.recommended,
+      reactHooks.configs['recommended-latest'],
+      reactRefresh.configs.vite,
+    ],
+    languageOptions: {
+      ecmaVersion: 2020,
+      globals: globals.browser,
+    },
+  },
+])
+
+
+📁 apps/web/index.html
+-----------------------
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>web</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
+
+📁 apps/web/package.json
+------------------------
+{
+  "name": "web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "framer-motion": "^12.23.24",
+    "lucide-react": "^0.553.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-router-dom": "^7.9.5",
+    "styled-components": "^6.1.19",
+    "vite-plugin-pwa": "^1.1.0",
+    "workbox-window": "^7.3.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.36.0",
+    "@types/node": "^24.6.0",
+    "@types/react": "^19.1.16",
+    "@types/react-dom": "^19.1.9",
+    "@types/styled-components": "^5.1.35",
+    "@vitejs/plugin-react": "^5.0.4",
+    "eslint": "^9.36.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.22",
+    "globals": "^16.4.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.45.0",
+    "vite": "^7.1.7"
+  }
+}
+
+
+📁 apps/web/tsconfig.app.json
+-----------------------------
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "types": ["vite/client"],
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  },
+  "include": ["src"]
+}
+
+
+📁 apps/web/tsconfig.node.json
+------------------------------
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "types": ["node"],
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  },
+  "include": ["vite.config.ts"]
+}
+
+
+📁 apps/web/vite.config.js
+--------------------------
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import { VitePWA } from 'vite-plugin-pwa'
+
+// https://vitejs.dev/config/
+export default defineConfig({
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+
+      // ✅ assets to copy into build
+      includeAssets: ['favicon.ico', 'robots.txt', 'apple-touch-icon.png'],
+
+      manifest: {
+        name: 'Iraitchi',
+        short_name: 'Iraitchi',
+        description: 'Easy Booking, Fast Cooking! Fresh seafood, meat, and poultry delivered direct from market.',
+        theme_color: '#26355D',
+        background_color: '#FFEB3B',
+        display: 'standalone',
+        start_url: '/',
+        icons: [
+          { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/maskable-icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+        ]
+      },
+
+      workbox: {
+        runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.destination === 'image',
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'images-cache',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 * 24 * 7 // 7 days
+              }
+            }
+          },
+          // {
+          //   // ✅ Fixed version — TS-safe
+          //   urlPattern: ({ url }) =>
+          //     url.origin === (typeof self !== 'undefined' && self.location ? self.location.origin : ''),
+          //   handler: 'StaleWhileRevalidate'
+          // }
+        ]
+      }
+    })
+  ],
+
+  // ✅ Helpful alias support
+  resolve: {
+    alias: {
+      '@': '/src'
+    }
+  },
+
+  // ✅ Clean builds
+  build: {
+    outDir: 'dist',
+    sourcemap: false
+  }
+})
+
+
+
+
+📁 apps/web/components/BackButton.tsx
+-------------------------------------
+import styled from 'styled-components';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
+
+const Btn = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.primary};
+  border: 1px solid rgba(255, 235, 59, 0.4);
+  border-radius: 8px;
+  padding: ${({ theme }) => theme.spacing(2)} ${({ theme }) => theme.spacing(3)};
+  cursor: pointer;
+    margin-bottom: 24px;
+  &:hover {
+    background: rgba(255, 235, 59, 0.08);
+  }
+
+  @media print {
+    display: none;
+  }
+`;
+
+export default function BackButton({ fallback = '/' }: { fallback?: string }) {
+  const navigate = useNavigate();
+  const onClick = () => (window.history.length > 1 ? navigate(-1) : navigate(fallback));
+  return (
+    <Btn onClick={onClick} aria-label="Go back">
+      <ArrowLeft size={18} />
+      Back
+    </Btn>
+  );
+}
+
+
+
+📁 apps/web/components/ProductModal.tsx
+---------------------------------------
+import styled from 'styled-components';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect, useState } from 'react';
+import { X } from 'lucide-react';
+
+const Overlay = styled(motion.div)`
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+`;
+
+const ModalBox = styled(motion.div)`
+  background: ${({ theme }) => theme.colors.secondary};
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  width: 90%;
+  max-width: 420px;
+  padding: ${({ theme }) => theme.spacing(8)};
+  color: ${({ theme }) => theme.colors.text};
+  position: relative;
+`;
+
+const CloseBtn = styled.button`
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: transparent;
+  border: none;
+  color: ${({ theme }) => theme.colors.primary};
+  cursor: pointer;
+`;
+
+const RadioGroup = styled.div`
+  margin: ${({ theme }) => theme.spacing(6)} 0;
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing(3)};
+`;
+
+const RadioOption = styled.label<{ selected: boolean }>`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: ${({ theme }) => theme.spacing(3)};
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid
+    ${({ selected, theme }) =>
+      selected ? theme.colors.primary : 'rgba(255,255,255,0.2)'};
+  background: ${({ selected }) =>
+    selected ? 'rgba(255, 235, 59, 0.1)' : 'transparent'};
+`;
+
+const AddBtn = styled.button`
+  margin-top: ${({ theme }) => theme.spacing(6)};
+  background: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.secondary};
+  border: none;
+  border-radius: 10px;
+  padding: ${({ theme }) => theme.spacing(4)};
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    opacity: 0.9;
+  }
+`;
+
+export default function ProductModal({ product, onClose }: any) {
+  const [selectedSize, setSelectedSize] = useState<any>(null);
+  const [selectedCut, setSelectedCut] = useState<any>(null);
+  const [price, setPrice] = useState(product.price || 0);
+
+  useEffect(() => {
+    // auto-select first available price option (Medium preferred)
+    if (product.priceOptions && product.priceOptions.length > 0) {
+      const medium =
+        product.priceOptions.find((opt: any) => opt.type === 'Medium') ||
+        product.priceOptions[0];
+      setSelectedSize(medium);
+      setPrice(medium.price);
+    } else {
+      setPrice(product.price);
+    }
+  }, [product]);
+
+  const handleCutChange = (cut: any) => {
+    setSelectedCut(cut);
+    setPrice(
+      (selectedSize?.price || product.price) + (cut?.price || 0)
+    );
+  };
+
+  const handleSizeChange = (opt: any) => {
+    setSelectedSize(opt);
+    const cutPrice = selectedCut?.price || 0;
+    setPrice(opt.price + cutPrice);
+  };
+
+  const handleAddToCart = () => {
+    const newItem = {
+      id: product.id,
+      name: product.name,
+      size: selectedSize?.type || 'Default',
+      cutType: selectedCut?.type || 'Standard',
+      price,
+      image: product.image,
+    };
+
+    const cart = JSON.parse(localStorage.getItem('iraitchi_cart') || '[]');
+    localStorage.setItem('iraitchi_cart', JSON.stringify([...cart, newItem]));
+    onClose();
+  };
+
+  return (
+    <AnimatePresence>
+      {product && (
+        <Overlay
+          onClick={onClose}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        >
+          <ModalBox
+            onClick={(e) => e.stopPropagation()}
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+          >
+            <CloseBtn onClick={onClose}>
+              <X size={20} />
+            </CloseBtn>
+
+            <h2 style={{ color: '#FFEB3B', marginBottom: 10 }}>
+              {product.name}
+            </h2>
+            <img
+              src={product.image}
+              alt={product.name}
+              style={{
+                width: '100%',
+                borderRadius: 8,
+                marginBottom: 20,
+              }}
+            />
+
+            {/* Size options */}
+            {product.priceOptions && product.priceOptions.length > 0 && (
+              <RadioGroup>
+                <strong>Choose Size:</strong>
+                {product.priceOptions.map((opt: any) => (
+                  <RadioOption
+                    key={opt.type}
+                    selected={selectedSize?.type === opt.type}
+                    onClick={() => handleSizeChange(opt)}
+                  >
+                    <span>{opt.type}</span>
+                    <span>₹{opt.price}</span>
+                  </RadioOption>
+                ))}
+              </RadioGroup>
+            )}
+
+            {/* Cut types */}
+            {product.cutTypes && product.cutTypes.length > 0 && (
+              <RadioGroup>
+                <strong>Choose Cut Type:</strong>
+                {product.cutTypes.map((cut: any) => (
+                  <RadioOption
+                    key={cut.type}
+                    selected={selectedCut?.type === cut.type}
+                    onClick={() => handleCutChange(cut)}
+                  >
+                    <span>{cut.type}</span>
+                    <span>+₹{cut.price}</span>
+                  </RadioOption>
+                ))}
+              </RadioGroup>
+            )}
+
+            <h3 style={{ marginTop: 20 }}>
+              Total Price: <span style={{ color: '#FFEB3B' }}>₹{price}</span>
+            </h3>
+
+            <AddBtn onClick={handleAddToCart}>Add to Cart</AddBtn>
+          </ModalBox>
+        </Overlay>
+      )}
+    </AnimatePresence>
+  );
+}
+
+
+
+📁 apps/web/data/products.ts
+----------------------------
+// src/data/products.ts
+export const category1 = [
+    {
+      id: "fish001",
+      name: "Vanjaram | All Fields",
+      category: "fish",
+      subCategory: "sea food",
+      description: "Good for eye and lungs",
+      image: "https://i.ibb.co/fnrwG9D/prawns.jpg", // sample
+      available: true,
+      priceOptions: [
+        { type: "Small", price: 700, available: true },
+        { type: "Medium", price: 810, available: true }
+      ],
+      cutTypes: [
+        { type: "Slice", price: 30 },
+        { type: "Curry cut", price: 25 }
+      ]
+    },
+    {
+      id: "fish002",
+      name: "Pomfret | White Fish",
+      category: "fish",
+      subCategory: "sea food",
+      description: "Rich in omega-3 and easy to cook",
+      image: "https://i.ibb.co/4g6FK8M/pomfret.jpg",
+      available: true,
+      priceOptions: [
+        { type: "Medium", price: 650, available: true }
+      ],
+      cutTypes: [
+        { type: "Whole", price: 0 },
+        { type: "Fillet", price: 35 }
+      ]
+    }
+  ];
+  
+  export const category2 = [
+    {
+      id: "meat001",
+      name: "Goat | Mutton",
+      category: "meat",
+      subCategory: "black goat",
+      image: "https://i.ibb.co/NLKcjcT/mutton.jpg",
+      available: true,
+      netWeight: "1kg",
+      price: 920
+    },
+    {
+      id: "meat002",
+      name: "Chicken Breast | Farm Fresh",
+      category: "poultry",
+      subCategory: "farm",
+      image: "https://i.ibb.co/qFkFW4r/chicken.jpg",
+      available: true,
+      netWeight: "500g",
+      price: 280
+    }
+  ];
+  
+  export const DELIVERY_FEE = 38; // 🚴‍♂️ Default global delivery charge
+  
+
+
+📁 apps/web/pages/AuthFlow.tsx
+------------------------------
+import React, { useState } from 'react';
+import styled from 'styled-components';
+import { motion } from 'framer-motion';
+
+const Wrapper = styled.main`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: ${({ theme }) => theme.colors.secondary};
+  color: ${({ theme }) => theme.colors.text};
+  text-align: center;
+  padding: ${({ theme }) => theme.spacing(8)};
+  position: relative;
+  overflow: hidden;
+
+  &::after {
+    content: '';
+    position: absolute;
+    width: 500px;
+    height: 500px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 235, 59, 0.08) 0%, transparent 70%);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    filter: blur(60px);
+  }
+`;
+
+const Title = styled(motion.h1)`
+  font-size: 2rem;
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.primary};
+  text-shadow: 0 0 12px rgba(255, 235, 59, 0.4);
+  margin-bottom: ${({ theme }) => theme.spacing(8)};
+  z-index: 1;
+`;
+
+const InputGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing(4)};
+  width: 100%;
+  max-width: 320px;
+  z-index: 1;
+`;
+
+const Input = styled.input`
+  padding: ${({ theme }) => theme.spacing(4)};
+  border-radius: 8px;
+  border: 1px solid ${({ theme }) => theme.colors.primary};
+  background: transparent;
+  color: ${({ theme }) => theme.colors.text};
+  font-size: 1rem;
+  text-align: center;
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 8px rgba(255, 235, 59, 0.4);
+  }
+`;
+
+const Button = styled(motion.button)`
+  margin-top: ${({ theme }) => theme.spacing(6)};
+  background: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.secondary};
+  font-weight: 600;
+  font-size: 1rem;
+  border-radius: 8px;
+  padding: ${({ theme }) => theme.spacing(4)};
+  border: none;
+  cursor: pointer;
+  transition: 0.3s ease;
+  box-shadow: 0 4px 10px rgba(255, 235, 59, 0.3);
+
+  &:hover {
+    transform: scale(1.05);
+    opacity: 0.95;
+  }
+`;
+
+const Message = styled(motion.div)`
+  margin-top: ${({ theme }) => theme.spacing(6)};
+  font-size: 1rem;
+  font-weight: 500;
+  color: ${({ theme }) => theme.colors.primary};
+  z-index: 1;
+`;
+
+export default function AuthFlow() {
+  const [step, setStep] = useState<'form' | 'otp'>('form');
+  const [pincode, setPincode] = useState('');
+  const [name, setName] = useState('');
+  const [mobile, setMobile] = useState('');
+  const [otp, setOtp] = useState('');
+  const [message, setMessage] = useState('');
+
+  const availableAreas = ['600125', '600122', '600116'];
+
+  const handleProceed = () => {
+    if (!pincode || !name || !mobile) {
+      setMessage('⚠️ Please fill all fields.');
+      return;
+    }
+
+    if (!availableAreas.includes(pincode.trim())) {
+      setMessage('🚧 Sorry, we’re expanding soon!');
+      return;
+    }
+
+    // Mock OTP send
+    const mockOtp = '1234';
+    localStorage.setItem('mockOtp', mockOtp);
+    setMessage('📨 OTP sent successfully!');
+    setStep('otp');
+  };
+
+  const handleVerify = () => {
+    const storedOtp = localStorage.getItem('mockOtp');
+    if (otp.trim() === storedOtp) {
+      const user = { name, mobile, pincode };
+      localStorage.setItem('iraitchi_user', JSON.stringify(user));
+      setMessage('✅ Verified! Welcome to Iraitchi 🐟');
+      setTimeout(() => {
+        window.location.href = '/products';
+      }, 1500);
+    } else {
+      setMessage('❌ Invalid OTP, please try again.');
+    }
+  };
+
+  return (
+    <Wrapper>
+      <Title
+        initial={{ opacity: 0, y: -40 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8 }}
+      >
+        Welcome to Iraitchi 🐟
+      </Title>
+
+      {step === 'form' && (
+        <InputGroup>
+          <Input
+            type="text"
+            placeholder="Enter Pincode"
+            value={pincode}
+            onChange={(e) => setPincode(e.target.value)}
+          />
+          <Input
+            type="text"
+            placeholder="Enter Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <Input
+            type="tel"
+            placeholder="Enter Mobile"
+            value={mobile}
+            onChange={(e) => setMobile(e.target.value)}
+          />
+
+          <Button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleProceed}
+          >
+            Proceed
+          </Button>
+        </InputGroup>
+      )}
+
+      {step === 'otp' && (
+        <InputGroup>
+          <Input
+            type="text"
+            placeholder="Enter OTP"
+            value={otp}
+            onChange={(e) => setOtp(e.target.value)}
+          />
+
+          <Button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleVerify}
+          >
+            Verify OTP
+          </Button>
+        </InputGroup>
+      )}
+
+      {message && (
+        <Message
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+        >
+          {message}
+        </Message>
+      )}
+    </Wrapper>
+  );
+}
+
+
+
+📁 apps/web/pages/Cart.tsx
+--------------------------
+import React, { useEffect, useState, useCallback, useMemo } from "react";
+import styled from "styled-components";
+import { motion, AnimatePresence } from "framer-motion";
+import { Trash2, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import BackButton from "@/components/BackButton";
+import { OrderService } from "../services/orderService";
+
+const Wrapper = styled.main`
+  min-height: 100vh;
+  background-color: ${({ theme }) => theme.colors.secondary};
+  color: ${({ theme }) => theme.colors.text};
+  padding: ${({ theme }) => theme.spacing(8)};
+  position: relative;
+`;
+
+const Section = styled.section`
+  margin-bottom: ${({ theme }) => theme.spacing(8)};
+`;
+
+const Title = styled.h2`
+  color: ${({ theme }) => theme.colors.primary};
+  margin-bottom: ${({ theme }) => theme.spacing(4)};
+`;
+
+const Card = styled(motion.div)`
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: ${({ theme }) => theme.spacing(4)};
+  margin-bottom: ${({ theme }) => theme.spacing(4)};
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing(4)};
+  flex-wrap: wrap;
+
+  .details {
+    flex: 1;
+  }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .qty-btn {
+    background: ${({ theme }) => theme.colors.primary};
+    color: ${({ theme }) => theme.colors.secondary};
+    border: none;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  .remove-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: ${({ theme }) => theme.colors.primary};
+  }
+`;
+
+const Button = styled(motion.button)`
+  background-color: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.secondary};
+  font-weight: 600;
+  border: none;
+  padding: ${({ theme }) => theme.spacing(4)};
+  border-radius: 10px;
+  cursor: pointer;
+  width: 100%;
+  font-size: 1rem;
+  transition: 0.3s ease;
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const Input = styled.input`
+  width: 100%;
+  padding: ${({ theme }) => theme.spacing(3)};
+  border-radius: 8px;
+  border: 1px solid ${({ theme }) => theme.colors.primary};
+  background: transparent;
+  color: ${({ theme }) => theme.colors.text};
+  margin-bottom: ${({ theme }) => theme.spacing(4)};
+`;
+
+const SlotGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: ${({ theme }) => theme.spacing(3)};
+`;
+
+const SlotButton = styled(motion.button)<{ active?: boolean; disabled?: boolean }>`
+  background: ${({ active, theme }) => (active ? theme.colors.primary : "transparent")};
+  color: ${({ active, theme }) => (active ? theme.colors.secondary : theme.colors.text)};
+  border: 1px solid ${({ theme }) => theme.colors.primary};
+  border-radius: 8px;
+  padding: ${({ theme }) => theme.spacing(3)};
+  cursor: ${({ disabled }) => (disabled ? "not-allowed" : "pointer")};
+  opacity: ${({ disabled }) => (disabled ? 0.4 : 1)};
+`;
+
+const Modal = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 50;
+
+  .content {
+    background: ${({ theme }) => theme.colors.secondary};
+    padding: ${({ theme }) => theme.spacing(6)};
+    border-radius: 10px;
+    width: 90%;
+    max-width: 500px;
+    color: ${({ theme }) => theme.colors.text};
+    max-height: 70vh;
+    overflow-y: auto;
+    position: relative;
+  }
+
+  .close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    cursor: pointer;
+  }
+`;
+
+export default function Cart() {
+  const navigate = useNavigate();
+  const [cart, setCart] = useState<any[]>(() => JSON.parse(localStorage.getItem("iraitchi_cart") || "[]"));
+  const [user, setUser] = useState<any>(() => JSON.parse(localStorage.getItem("iraitchi_user") || "{}"));
+  const [geo, setGeo] = useState(user.geo || null);
+  const [address, setAddress] = useState(user.address || { houseId: "", addr1: "", addr2: "" });
+  const [selectedSlot, setSelectedSlot] = useState("");
+  const [termsChecked, setTermsChecked] = useState(true);
+  const [termsOpen, setTermsOpen] = useState(false);
+  const [showPaymentPopup, setShowPaymentPopup] = useState(false);
+  const [pendingOrder, setPendingOrder] = useState<any>(null);
+  const deliveryFee = 38;
+
+  const currentHour = new Date().getHours();
+  const hours = Array.from({ length: 24 }, (_, i) => {
+    const start = i === 0 ? 12 : i > 12 ? i - 12 : i;
+    const ampm = i < 12 ? "AM" : "PM";
+    const next = (i + 1) % 24;
+    const nextDisplay = next === 0 ? 12 : next > 12 ? next - 12 : next;
+    const nextAmpm = next < 12 ? "AM" : "PM";
+    return `${start}${ampm} - ${nextDisplay}${nextAmpm}`;
+  });
+
+  useEffect(() => {
+    if (!cart || cart.length === 0) navigate("/products");
+  }, [cart, navigate]);
+
+  const handleQtyChange = useCallback((id: string, change: number) => {
+    setCart((prev) => {
+      const updated = prev.map((item) =>
+        item.id === id ? { ...item, qty: Math.max(1, (item.qty || 1) + change) } : item
+      );
+      localStorage.setItem("iraitchi_cart", JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  const handleRemove = useCallback((id: string) => {
+    if (!confirm("Remove this item from cart?")) return;
+    setCart((prev) => {
+      const updated = prev.filter((item) => item.id !== id);
+      localStorage.setItem("iraitchi_cart", JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  const handleAddressChange = useCallback(
+    (key: string, value: string) => {
+      setAddress((prev) => {
+        const updatedAddress = { ...prev, [key]: value };
+        const updatedUser = { ...user, address: updatedAddress };
+        setUser(updatedUser);
+        localStorage.setItem("iraitchi_user", JSON.stringify(updatedUser));
+        return updatedAddress;
+      });
+    },
+    [user]
+  );
+
+  const getLocation = useCallback(() => {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const newGeo = { lat: pos.coords.latitude, long: pos.coords.longitude };
+        setGeo(newGeo);
+        const updatedUser = { ...user, geo: newGeo };
+        setUser(updatedUser);
+        localStorage.setItem("iraitchi_user", JSON.stringify(updatedUser));
+      },
+      () => alert("Location access denied!")
+    );
+  }, [user]);
+
+  const subtotal = useMemo(() => {
+    return cart.reduce((sum, item) => sum + (item.price + (item.cutFee || 0)) * (item.qty || 1), 0);
+  }, [cart]);
+
+  const gst = useMemo(() => subtotal * 0.05, [subtotal]);
+  const total = useMemo(() => subtotal + gst + deliveryFee, [subtotal, gst]);
+
+  const canPay =
+    cart.length > 0 &&
+    selectedSlot.trim() !== "" &&
+    geo?.lat &&
+    geo?.long &&
+    address.houseId.trim() !== "" &&
+    address.addr1.trim() !== "" &&
+    address.addr2.trim() !== "" &&
+    termsChecked;
+
+    const handlePay = () => {
+        // 1️⃣ create order payload
+        const orderId = "ORD" + Math.floor(1000 + Math.random() * 9000);
+        const date = new Date().toISOString();
+        const subtotalVal = subtotal;
+        const gstVal = gst;
+        const totalVal = subtotal + gst + deliveryFee;
+      
+        const newOrder = {
+          orderId,
+          userId: user._id || "usr-temp",
+          date,
+          items: cart.map((item) => ({
+            id: item.id,
+            name: item.name,
+            qty: item.qty || 1,
+            size: item.size,
+            cutType: item.cutType,
+            price: item.price
+          })),
+          subtotal: subtotalVal,
+          gst: gstVal,
+          deliveryFee,
+          total: totalVal,
+          deliverySlot: selectedSlot,
+          status: "Placed",
+          captions: "Awaiting admin confirmation",
+          userAddress: address,
+          geo
+        };
+        setPendingOrder(newOrder);
+        setShowPaymentPopup(true);
+      };
+
+      const handlePaymentResult = (result: "success" | "failure") => {
+        setShowPaymentPopup(false);
+      
+        if (result === "success" && pendingOrder) {
+            OrderService.addOrder(pendingOrder);
+            OrderService.clearCart();
+          // clear cart in success page
+          navigate("/order-success");
+        //   setCart([]);
+        } else {
+          navigate("/order-failed");
+        }
+      };
+
+  return (
+    <Wrapper>
+      <BackButton fallback="/" />
+      <Title>🛒 My Cart</Title>
+
+      {/* Cart Items */}
+      <Section>
+        <AnimatePresence>
+          {cart.map((item) => (
+            <Card key={item.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <div className="details">
+                <strong>{item.name}</strong>
+                <p>Size: {item.size || "-"} | Cut: {item.cutType || "-"}</p>
+                <p>Unit: ₹{item.price}</p>
+                <p>Total: ₹{((item.qty || 1) * item.price).toFixed(2)}</p>
+              </div>
+              <div className="controls">
+                <button className="qty-btn" onClick={() => handleQtyChange(item.id, -1)}>-</button>
+                <motion.span key={item.qty} initial={{ scale: 0.8 }} animate={{ scale: 1 }}>
+                  {item.qty || 1}
+                </motion.span>
+                <button className="qty-btn" onClick={() => handleQtyChange(item.id, 1)}>+</button>
+                <button className="remove-btn" onClick={() => handleRemove(item.id)}>
+                  <Trash2 size={18} />
+                </button>
+              </div>
+            </Card>
+          ))}
+        </AnimatePresence>
+      </Section>
+
+      {/* Location */}
+      <Section>
+        <Title>📍 Delivery Location</Title>
+        {!geo ? (
+          <Button whileTap={{ scale: 0.98 }} onClick={getLocation}>
+            Get Current Location
+          </Button>
+        ) : (
+          <p>✅ Location: {geo.lat.toFixed(3)}, {geo.long.toFixed(3)}</p>
+        )}
+      </Section>
+
+      {/* Address */}
+      <Section>
+        <Title>🏠 Address Details</Title>
+        <Input placeholder="House / Flat No" value={address.houseId} onChange={(e) => handleAddressChange("houseId", e.target.value)} />
+        <Input placeholder="Address Line 1" value={address.addr1} onChange={(e) => handleAddressChange("addr1", e.target.value)} />
+        <Input placeholder="Address Line 2" value={address.addr2} onChange={(e) => handleAddressChange("addr2", e.target.value)} />
+      </Section>
+
+      {/* Slot */}
+      <Section>
+        <Title>🕓 Delivery Slot</Title>
+        <SlotGrid>
+          {hours.map((slot, i) => {
+            const disabled = i === currentHour || i === currentHour + 1;
+            return (
+              <SlotButton key={slot} disabled={disabled} active={selectedSlot === slot} onClick={() => !disabled && setSelectedSlot(slot)}>
+                {slot}
+              </SlotButton>
+            );
+          })}
+        </SlotGrid>
+      </Section>
+
+      {/* Summary */}
+      <Section>
+        <Title>💰 Summary</Title>
+        <Card>
+          <p>Subtotal: ₹{subtotal.toFixed(2)}</p>
+          <p>GST (5%): ₹{gst.toFixed(2)}</p>
+          <p>Delivery Fee: ₹{deliveryFee}</p>
+          <h3>Total: ₹{total.toFixed(2)}</h3>
+        </Card>
+      </Section>
+
+      {/* Terms */}
+      <Section>
+        <label>
+          <input type="checkbox" checked={termsChecked} onChange={() => setTermsChecked(!termsChecked)} /> I accept{" "}
+          <span style={{ color: "#FFEB3B", cursor: "pointer" }} onClick={() => setTermsOpen(true)}>Terms & Conditions</span>
+        </label>
+      </Section>
+
+      {/* Pay Button */}
+      <Button whileTap={{ scale: canPay ? 0.97 : 1 }} disabled={!canPay} onClick={handlePay}>
+        Pay ₹{total.toFixed(2)}
+      </Button>
+
+      {/* Terms Modal */}
+      <AnimatePresence>
+        {termsOpen && (
+          <Modal as={motion.div} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <div className="content">
+              <X className="close" onClick={() => setTermsOpen(false)} />
+              <h3>Terms & Conditions</h3>
+              <p>
+                By placing your order, you agree that Iraitchi ensures the freshest seafood, meat, and poultry sourced directly from trusted markets.
+                Delivery times may vary based on local availability and conditions.
+              </p>
+            </div>
+          </Modal>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+  {showPaymentPopup && (
+    <Modal
+      as={motion.div}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <div className="content">
+        <X className="close" onClick={() => setShowPaymentPopup(false)} />
+        <h3>Simulate Payment Result</h3>
+        <p>Select a payment outcome to continue:</p>
+        <div style={{ marginTop: "20px", display: "flex", gap: "20px" }}>
+          <Button
+            whileTap={{ scale: 0.95 }}
+            onClick={() => handlePaymentResult("success")}
+          >
+            ✅ Success
+          </Button>
+          <Button
+            whileTap={{ scale: 0.95 }}
+            onClick={() => handlePaymentResult("failure")}
+          >
+            ❌ Failure
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  )}
+</AnimatePresence>
+    </Wrapper>
+  );
+}
+
+
+
+📁 apps/web/pages/Feedback.tsx
+------------------------------
+import styled from 'styled-components';
+import { useState } from 'react';
+import BackButton from '../components/BackButton';
+
+const Wrapper = styled.main`
+  background-color: ${({ theme }) => theme.colors.secondary};
+  color: ${({ theme }) => theme.colors.text};
+  padding: ${({ theme }) => theme.spacing(8)};
+  text-align: center;
+`;
+
+const TextArea = styled.textarea`
+  width: 100%;
+  max-width: 400px;
+  height: 120px;
+  margin-top: ${({ theme }) => theme.spacing(8)};
+  padding: ${({ theme }) => theme.spacing(4)};
+  border-radius: 8px;
+  border: 1px solid ${({ theme }) => theme.colors.primary};
+  background: transparent;
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+const Button = styled.button`
+  margin-top: ${({ theme }) => theme.spacing(4)};
+  background: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.secondary};
+  padding: ${({ theme }) => theme.spacing(3)} ${({ theme }) => theme.spacing(6)};
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+
+  &:hover {
+    opacity: 0.9;
+  }
+`;
+
+export default function Feedback() {
+  const [feedback, setFeedback] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleSubmit = () => {
+    setSubmitted(true);
+    setFeedback('');
+  };
+
+  return (
+    <Wrapper>
+      <BackButton />
+      <h1>💬 Feedback</h1>
+      {!submitted ? (
+        <>
+          <p>We value your feedback! Please share your thoughts below:</p>
+          <TextArea
+            placeholder="Type your feedback..."
+            value={feedback}
+            onChange={(e) => setFeedback(e.target.value)}
+          />
+          <Button onClick={handleSubmit}>Submit</Button>
+        </>
+      ) : (
+        <p>✅ Thanks for your feedback!</p>
+      )}
+    </Wrapper>
+  );
+}
+
+
+
+📁 apps/web/pages/Invoice.tsx
+-----------------------------
+import styled from 'styled-components';
+import { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import BackButton from '../components/BackButton';
+
+const Wrapper = styled.main`
+  background-color: ${({ theme }) => theme.colors.secondary};
+  color: ${({ theme }) => theme.colors.text};
+  padding: ${({ theme }) => theme.spacing(8)};
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+`;
+
+const InvoiceCard = styled.div`
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: ${({ theme }) => theme.spacing(8)};
+  width: 100%;
+  max-width: 600px;
+  box-shadow: 0 4px 12px rgba(255, 235, 59, 0.15);
+`;
+
+const Header = styled.div`
+  text-align: center;
+  margin-bottom: ${({ theme }) => theme.spacing(6)};
+
+  h1 {
+    color: ${({ theme }) => theme.colors.primary};
+    margin-bottom: ${({ theme }) => theme.spacing(2)};
+  }
+
+  p {
+    color: ${({ theme }) => theme.colors.mutedText};
+  }
+`;
+
+const Section = styled.div`
+  margin-bottom: ${({ theme }) => theme.spacing(6)};
+`;
+
+const Table = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: ${({ theme }) => theme.spacing(4)};
+
+  th, td {
+    padding: ${({ theme }) => theme.spacing(3)};
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  th {
+    color: ${({ theme }) => theme.colors.primary};
+  }
+`;
+
+const Total = styled.div`
+  text-align: right;
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-top: ${({ theme }) => theme.spacing(6)};
+`;
+
+const PrintButton = styled.button`
+  margin-top: ${({ theme }) => theme.spacing(8)};
+  background: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.secondary};
+  border: none;
+  border-radius: 8px;
+  padding: ${({ theme }) => theme.spacing(4)} ${({ theme }) => theme.spacing(6)};
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    opacity: 0.9;
+    transform: scale(1.03);
+  }
+
+  @media print {
+    display: none;
+  }
+`;
+
+const TopBar = styled.div`
+  width: 100%;
+  max-width: 600px;
+  display: flex;
+  align-items: center;
+  margin-bottom: ${({ theme }) => theme.spacing(4)};
+
+  @media print {
+    display: none; /* hide in print/PDF */
+  }
+`;
+
+export default function Invoice() {
+  const [user, setUser] = useState<any>(null);
+  const [order, setOrder] = useState<any>(null);
+
+  const { id } = useParams();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('iraitchi_user');
+    if (storedUser) setUser(JSON.parse(storedUser));
+
+    const allOrders = JSON.parse(localStorage.getItem('iraitchi_orders') || '[]');
+    const selectedOrder = allOrders.find((o: any) => o.id === id);
+    if (selectedOrder) setOrder(selectedOrder);
+  }, [id]);
+
+  const getTotal = () => {
+    if (!order) return 0;
+    const itemTotal = order.items.reduce((acc, i) => acc + i.qty * i.price, 0);
+    return itemTotal + order.deliveryFee;
+  };
+  
+  // const goBack = () => navigate(-1);
+
+  if (!user || !order) return <Wrapper>Loading invoice...</Wrapper>;
+
+  return (
+    <Wrapper>
+      <TopBar>
+        <BackButton />
+      </TopBar>
+      <InvoiceCard>
+        <Header>
+          <h1>Iraitchi Invoice 🧾</h1>
+          <p>Order ID: {order.id}</p>
+          <p>Date: {order.date}</p>
+        </Header>
+
+        <Section>
+          <h3>Customer Details</h3>
+          <p><strong>Name:</strong> {user.name}</p>
+          <p><strong>Mobile:</strong> {user.mobile}</p>
+          <p><strong>Pincode:</strong> {user.pincode}</p>
+        </Section>
+
+        <Section>
+          <h3>Order Summary</h3>
+          <Table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Qty</th>
+                <th>Price</th>
+              </tr>
+            </thead>
+            <tbody>
+              {order.items.map((item: any) => (
+                <tr key={item.name}>
+                  <td>{item.name}</td>
+                  <td>{item.qty}</td>
+                  <td>₹ {item.price}</td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+          <Total>
+            Delivery: ₹ {order.deliveryFee} <br />
+            Total: ₹ {getTotal()}
+          </Total>
+        </Section>
+      </InvoiceCard>
+
+      <PrintButton onClick={() => window.print()}>🖨 Print / Download</PrintButton>
+    </Wrapper>
+  );
+}
+
+
+
+📁 apps/web/pages/order-failed.tsx
+----------------------------------
+import React from "react";
+import styled from "styled-components";
+import { motion } from "framer-motion";
+import { XCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
+const Wrapper = styled.main`
+  min-height: 100vh;
+  background-color: ${({ theme }) => theme.colors.secondary};
+  color: ${({ theme }) => theme.colors.text};
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  text-align: center;
+`;
+
+const Button = styled(motion.button)`
+  margin-top: 2rem;
+  background-color: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.secondary};
+  font-weight: 600;
+  border: none;
+  padding: 0.8rem 1.5rem;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 1rem;
+`;
+
+export default function OrderFailed() {
+  const navigate = useNavigate();
+
+  return (
+    <Wrapper>
+      <motion.div
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ type: "spring", stiffness: 200 }}
+      >
+        <XCircle size={100} color="#FF4D4D" />
+      </motion.div>
+      <h2 style={{ color: "#FF4D4D", marginTop: "20px" }}>Payment Failed</h2>
+      <p style={{ color: "#BFC6DC" }}>
+        Your payment could not be processed. Please try again.
+      </p>
+      <Button whileTap={{ scale: 0.95 }} onClick={() => navigate("/cart")}>
+        Retry Payment
+      </Button>
+      <Button
+        whileTap={{ scale: 0.95 }}
+        style={{ marginTop: "1rem", backgroundColor: "#BFC6DC", color: "#26355D" }}
+        onClick={() => navigate("/products")}
+      >
+        Back to Products
+      </Button>
+    </Wrapper>
+  );
+}
+
+
+
+📁 apps/web/pages/order-success.tsx
+-----------------------------------
+import React, { useEffect } from "react";
+import styled from "styled-components";
+import { motion } from "framer-motion";
+import { CheckCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
+const Wrapper = styled.main`
+  min-height: 100vh;
+  background-color: ${({ theme }) => theme.colors.secondary};
+  color: ${({ theme }) => theme.colors.text};
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  text-align: center;
+`;
+
+const Button = styled(motion.button)`
+  margin-top: 2rem;
+  background-color: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.secondary};
+  font-weight: 600;
+  border: none;
+  padding: 0.8rem 1.5rem;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 1rem;
+`;
+
+export default function OrderSuccess() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    localStorage.setItem("iraitchi_cart", "[]");
+    console.log("✅ Order placed successfully!");
+  }, []);
+
+  return (
+    <Wrapper>
+      <motion.div
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ type: "spring", stiffness: 200 }}
+      >
+        <CheckCircle size={100} color="#FFEB3B" />
+      </motion.div>
+      <h2 style={{ color: "#FFEB3B", marginTop: "20px" }}>Order Confirmed!</h2>
+      <p style={{ color: "#BFC6DC" }}>
+        Thank you for choosing Iraitchi. Your order has been successfully placed.
+        We’ll notify you once it’s out for delivery.
+      </p>
+      <Button whileTap={{ scale: 0.95 }} onClick={() => navigate("/profile")}>
+        View My Orders
+      </Button>
+      <Button
+        whileTap={{ scale: 0.95 }}
+        style={{ marginTop: "1rem", backgroundColor: "#BFC6DC", color: "#26355D" }}
+        onClick={() => navigate("/products")}
+      >
+        Continue Shopping
+      </Button>
+    </Wrapper>
+  );
+}
+
+
+
+📁 apps/web/pages/Products.tsx
+------------------------------
+import React, { useState, useEffect } from 'react';
+import styled from 'styled-components';
+import { motion, AnimatePresence } from 'framer-motion';
+import ProductModal from '@/components/ProductModal';
+import { category1, category2 } from '@/data/products';
+import { ShoppingCart } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+
+const Wrapper = styled.main`
+  background-color: ${({ theme }) => theme.colors.secondary};
+  color: ${({ theme }) => theme.colors.text};
+  padding: ${({ theme }) => theme.spacing(8)};
+  position: relative;
+  overflow: hidden;
+`;
+
+const Header = styled.header`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: ${({ theme }) => theme.spacing(8)};
+
+  h1 {
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: 1.8rem;
+    font-weight: 600;
+  }
+  .cart-icon {
+    position: relative;
+    cursor: pointer;
+    color: ${({ theme }) => theme.colors.primary};
+  }
+  .cart-count {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: ${({ theme }) => theme.colors.primary};
+    color: ${({ theme }) => theme.colors.secondary};
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+`;
+
+const CategoryBar = styled.div`
+  display: flex;
+  gap: ${({ theme }) => theme.spacing(4)};
+  justify-content: center;
+  margin-bottom: ${({ theme }) => theme.spacing(8)};
+`;
+
+const CategoryButton = styled(motion.button)<{ active: boolean }>`
+  padding: ${({ theme }) => theme.spacing(3)} ${({ theme }) => theme.spacing(6)};
+  border-radius: 50px;
+  border: 1px solid ${({ theme }) => theme.colors.primary};
+  background: ${({ active, theme }) =>
+    active ? theme.colors.primary : 'transparent'};
+  color: ${({ active, theme }) =>
+    active ? theme.colors.secondary : theme.colors.text};
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.3s ease;
+
+  &:hover {
+    opacity: 0.9;
+    transform: scale(1.05);
+  }
+`;
+
+const SearchBox = styled.input`
+  display: block;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto ${({ theme }) => theme.spacing(8)};
+  padding: ${({ theme }) => theme.spacing(3)};
+  border-radius: 8px;
+  border: 1px solid ${({ theme }) => theme.colors.primary};
+  background: transparent;
+  color: ${({ theme }) => theme.colors.text};
+  text-align: center;
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 8px rgba(255, 235, 59, 0.4);
+  }
+`;
+
+const Grid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: ${({ theme }) => theme.spacing(8)};
+`;
+
+const Card = styled.div`
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: ${({ theme }) => theme.spacing(6)};
+  text-align: center;
+  cursor: pointer;
+  transition: 0.3s ease;
+
+  &:hover {
+    transform: scale(1.03);
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  img {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: ${({ theme }) => theme.spacing(4)};
+  }
+
+  h3 {
+    font-size: 1.1rem;
+    color: ${({ theme }) => theme.colors.primary};
+    margin-bottom: ${({ theme }) => theme.spacing(2)};
+  }
+
+  p {
+    font-size: 0.9rem;
+    color: ${({ theme }) => theme.colors.mutedText};
+  }
+`;
+
+const EmptyState = styled.p`
+  text-align: center;
+  color: ${({ theme }) => theme.colors.mutedText};
+  margin-top: ${({ theme }) => theme.spacing(8)};
+`;
+
+export default function Products() {
+  const [category, setCategory] = useState<string>('fish');
+  const [search, setSearch] = useState<string>('');
+  const [debouncedSearch, setDebouncedSearch] = useState<string>('');
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [cartCount, setCartCount] = useState<number>(0);
+  const navigate = useNavigate();
+
+  const products = [...category1, ...category2];
+
+  // 🕒 Debounce search (0.8 s)
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedSearch(search), 800);
+    return () => clearTimeout(handler);
+  }, [search]);
+
+  // 🧠 Smart reactive filter
+  const visibleProducts = products.filter((p) => {
+    if (debouncedSearch.trim() !== '') {
+      return p.name.toLowerCase().includes(debouncedSearch.toLowerCase());
+    }
+    const currentCategory = category || 'fish';
+    return p.category === currentCategory;
+  });
+
+  useEffect(() => {
+    const cart = JSON.parse(localStorage.getItem('iraitchi_cart') || '[]');
+    setCartCount(cart.length);
+  }, [selectedProduct]);
+
+  return (
+    <Wrapper>
+      <Header>
+        <h1>Iraitchi</h1>
+        <div className="cart-icon" onClick={() => navigate('/cart')}>
+          <ShoppingCart size={26} />
+          {cartCount > 0 && <span className="cart-count">{cartCount}</span>}
+        </div>
+      </Header>
+
+      {/* 🔹 Category buttons */}
+      <CategoryBar>
+        {['fish', 'meat'].map((cat) => (
+          <CategoryButton
+            key={cat}
+            active={category === cat}
+            onClick={() => {
+              setCategory(cat);
+              setSearch('');
+            }}
+            whileHover={{ scale: 1.05 }}
+          >
+            {cat.toUpperCase()}
+          </CategoryButton>
+        ))}
+      </CategoryBar>
+
+      {/* 🔹 Search input */}
+      <SearchBox
+        type="text"
+        placeholder="Search products..."
+        value={search}
+        onChange={(e) => {
+          const value = e.target.value;
+          setSearch(value);
+          if (value.trim() !== '') setCategory('');
+          else setCategory('fish'); // default fallback
+        }}
+      />
+
+      {/* 🔹 Product grid with transitions */}
+      <Grid>
+        <AnimatePresence mode="wait">
+          {visibleProducts.length > 0 ? (
+            visibleProducts.map((item) => (
+              <motion.div
+                key={item.id}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
+              >
+                <Card onClick={() => setSelectedProduct(item)}>
+                  <img src={item.image} alt={item.name} />
+                  <h3>{item.name}</h3>
+
+                  {item.category === 'fish' ? (
+                    <>
+                      <p>Base: ₹ {item.priceOptions?.[0]?.price || 0}</p>
+                      <small>Cut Types:</small>
+                      <ul style={{ listStyle: 'none', padding: 0, marginTop: 4 }}>
+                        {item.cutTypes.map((cut: any) => (
+                          <li key={cut.type}>
+                            {cut.type}: +₹{cut.price}
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  ) : (
+                    <p>
+                      {item.netWeight} — ₹ {item.price}
+                    </p>
+                  )}
+
+                  <p style={{ color: '#BFC6DC', marginTop: 8 }}>
+                    {item.description}
+                  </p>
+                </Card>
+              </motion.div>
+            ))
+          ) : (
+            <motion.div
+              key="empty"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <EmptyState>No products found</EmptyState>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </Grid>
+
+      {/* 🔹 Product Modal */}
+      <AnimatePresence>
+        {selectedProduct && (
+          <ProductModal
+            product={selectedProduct}
+            onClose={() => setSelectedProduct(null)}
+          />
+        )}
+      </AnimatePresence>
+    </Wrapper>
+  );
+}
+
+
+
+📁 apps/web/pages/Profile.tsx
+-----------------------------
+import styled from 'styled-components';
+import { useEffect, useState } from 'react';
+import BackButton from '../components/BackButton';
+import { useNavigate } from 'react-router-dom';
+
+const Wrapper = styled.main`
+  background-color: ${({ theme }) => theme.colors.secondary};
+  color: ${({ theme }) => theme.colors.text};
+  padding: ${({ theme }) => theme.spacing(8)};
+`;
+
+const OrdersSection = styled.div`
+  margin-top: ${({ theme }) => theme.spacing(8)};
+`;
+
+const OrderCard = styled.div`
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: ${({ theme }) => theme.spacing(4)};
+  margin-bottom: ${({ theme }) => theme.spacing(4)};
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: 0.2s ease;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+`;
+
+export default function Profile() {
+  const [user, setUser] = useState<any>(null);
+  const [orders, setOrders] = useState<any[]>([]);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('iraitchi_user');
+    if (storedUser) setUser(JSON.parse(storedUser));
+
+     // 🧾 TODO: Mock order data if not available
+     let existingOrders = JSON.parse(localStorage.getItem('iraitchi_orders') || '[]');
+     if (existingOrders.length === 0) {
+       existingOrders = [
+         {
+           id: 'ORD001',
+           date: '2025-11-08',
+           total: 820,
+           items: [
+             { name: 'Prawns', qty: 1, price: 450 },
+             { name: 'Chicken Breast', qty: 2, price: 280 },
+           ],
+           deliveryFee: 40,
+         },
+         {
+           id: 'ORD002',
+           date: '2025-11-07',
+           total: 550,
+           items: [
+             { name: 'Mutton Curry Cut', qty: 1, price: 500 },
+           ],
+           deliveryFee: 50,
+         },
+       ];
+       localStorage.setItem('iraitchi_orders', JSON.stringify(existingOrders));
+     }
+ 
+     setOrders(existingOrders);
+  }, []);
+
+  const handleViewInvoice = (id: string) => {
+    navigate(`/invoice/${id}`);
+  };
+
+  if (!user) return <Wrapper>Loading profile...</Wrapper>;
+
+  return (
+    <Wrapper>
+      <BackButton />
+      <h1>👤 {user.name}</h1>
+      <p>📱 {user.mobile}</p>
+      <p>📍 {user.pincode}</p>
+
+      <hr style={{ margin: '2rem 0', opacity: 0.2 }} />
+
+      <h2>🧾 Order History</h2>
+      <p>
+  <a
+    href="/invoice"
+    style={{
+      color: '#FFEB3B',
+      textDecoration: 'none',
+      fontWeight: '600',
+    }}
+  >
+    View Sample Order Invoice →
+  </a>
+</p>
+<OrdersSection>
+        <h2>🧾 Order History</h2>
+        {orders.length === 0 ? (
+          <p>No orders found.</p>
+        ) : (
+          orders.map((order) => (
+            <OrderCard key={order.id} onClick={() => handleViewInvoice(order.id)}>
+              <div>
+                <strong>{order.id}</strong>
+                <p style={{ color: '#BFC6DC', fontSize: '0.9rem' }}>{order.date}</p>
+              </div>
+              <span style={{ color: '#FFEB3B' }}>₹ {order.total}</span>
+            </OrderCard>
+          ))
+        )}
+      </OrdersSection>
+    </Wrapper>
+  );
+}
+
+
+
+📁 apps/web/services/orderService.ts
+------------------------------------
+export const OrderService = {
+  getOrders: () => JSON.parse(localStorage.getItem("iraitchi_orders") || "[]"),
+
+  addOrder: (order: any) => {
+    const existing = OrderService.getOrders();
+    existing.push(order);
+    localStorage.setItem("iraitchi_orders", JSON.stringify(existing));
+  },
+
+  clearCart: () => {
+    localStorage.setItem("iraitchi_cart", "[]");
+  },
+
+  getCart: () => JSON.parse(localStorage.getItem("iraitchi_cart") || "[]"),
+
+  getUser: () => JSON.parse(localStorage.getItem("iraitchi_user") || "{}"),
+
+  setUser: (user: any) => {
+    localStorage.setItem("iraitchi_user", JSON.stringify(user));
+  }
+};
+
+
+📁 apps/web/styles/GlobalStyle.ts
+---------------------------------
+// src/styles/GlobalStyle.ts
+import { createGlobalStyle } from 'styled-components';
+
+export const GlobalStyle = createGlobalStyle`
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html, body {
+    font-family: ${({ theme }) => theme.fonts.main};
+    background-color: ${({ theme }) => theme.colors.secondary};
+    color: ${({ theme }) => theme.colors.text};
+    height: 100%;
+    width: 100%;
+    scroll-behavior: smooth;
+  }
+
+  #root {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    color: ${({ theme }) => theme.colors.primary};
+  }
+
+  p {
+    color: ${({ theme }) => theme.colors.mutedText};
+  }
+
+  button {
+    cursor: pointer;
+    border: none;
+    border-radius: 8px;
+    padding: ${({ theme }) => theme.spacing(3)} ${({ theme }) => theme.spacing(6)};
+    font-weight: 600;
+    font-size: 1rem;
+    transition: 0.25s ease;
+    background: ${({ theme }) => theme.colors.primary};
+    color: ${({ theme }) => theme.colors.secondary};
+    box-shadow: 0 4px 12px rgba(255, 235, 59, 0.2);
+
+    &:hover {
+      opacity: 0.95;
+      transform: translateY(-2px);
+    }
+  }
+
+  input, textarea {
+    background: ${({ theme }) => theme.colors.secondary};
+    color: ${({ theme }) => theme.colors.text};
+    border: 1px solid ${({ theme }) => theme.colors.primary};
+    border-radius: 6px;
+    padding: ${({ theme }) => theme.spacing(3)};
+    outline: none;
+
+    &:focus {
+      border-color: ${({ theme }) => theme.colors.primary};
+      box-shadow: 0 0 0 2px rgba(255, 235, 59, 0.3);
+    }
+  }
+`;
+
+
+
+
+📁 apps/web/styles/theme.ts
+---------------------------
+// src/styles/theme.ts
+export const theme = {
+    colors: {
+      primary: '#FFEB3B',      // Bright yellow accent
+      secondary: '#26355D',    // Deep navy - background
+      text: '#FFFFFF',         // White text for dark mode
+      mutedText: '#BFC6DC',    // Softer gray-blue for subtext
+    },
+    fonts: {
+      main: "'Poppins', sans-serif",
+    },
+    spacing: (factor: number) => `${0.25 * factor}rem`,
+  };
+  
+  export type ThemeType = typeof theme;
+  
+
+
+
+
+Bro, our next plan as follows, if you need to correct me, please do:
+
+
+
+
+
+
+
+
+📁 apps/web//
+---------------------------------

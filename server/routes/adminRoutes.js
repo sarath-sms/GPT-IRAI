@@ -1,15 +1,13 @@
 import express from "express";
-import { createSuperAdmin, superAdminLogin } from "../controllers/superAdminController.js";
-import { authorizeRoles, protect } from "../middleware/authMiddleware.js";
 import { assignOrdersByAdmin } from "../controllers/adminController.js";
+import { toggleShopStatus } from "../controllers/shopController.js";
+import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
+import { superAdminLogin } from "../controllers/superAdminController.js";
 
 const router = express.Router();
 
-// super admin
-router.post("/create", createSuperAdmin);
 router.post("/login", superAdminLogin);
-
-// admin
 router.post("/assign-orders", protect, authorizeRoles("admin"), assignOrdersByAdmin);
+router.patch("/shop/:id/toggle", protect, authorizeRoles("admin"), toggleShopStatus);
 
 export default router;
