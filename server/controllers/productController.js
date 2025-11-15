@@ -11,16 +11,26 @@ export const createProduct = async (req, res) => {
 };
 
 // 🔹 Get Products (all or filtered)
+// GET /api/superadmin/products?search=
 export const getProducts = async (req, res) => {
   try {
-    const { category, pincode } = req.query;
-    const filter = {};
-    if (category) filter.category = category;
-    if (pincode) filter.pincode = pincode;
-    const products = await Product.find(filter);
-    res.status(200).json(products);
+    const search = req.query.search || "";
+
+    const query = search
+      ? { name: { $regex: search, $options: "i" } }
+      : {};
+
+    const products = await Product.find(query);
+
+    res.json({
+      msg: "Products fetched",
+      count: products.length,
+      products
+    });
+
   } catch (err) {
-    res.status(500).json({ msg: "Server error", error: err.message });
+    console.error(err);
+    res.status(500).json({ msg: "Server error" });
   }
 };
 

@@ -1,14 +1,12 @@
 import express from "express";
 import {
   createSuperAdmin,
-  superAdminLogin,
 } from "../controllers/superAdminController.js";
 import {
   createDriver,
   getDrivers,
   updateDriver,
   deleteDriver,
-  assignOrderToDriver,
 } from "../controllers/driverController.js";
 import {
   createProduct,
@@ -28,42 +26,48 @@ import {
 } from "../controllers/shopController.js";
 import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
 import { createAdmin, deleteAdmin, getAdmins, updateAdmin } from "../controllers/adminController.js";
+import { getSuperAdminDashboard } from "../controllers/superAdminDashboardController.js";
+import { employeeLogin } from "../controllers/authController.js";
 
 const router = express.Router();
 
 // 🔹 SuperAdmin Auth
 router.post("/create", createSuperAdmin);
-router.post("/login", superAdminLogin);
+router.post("/login", employeeLogin);
 
-// 🔹 Admin Management
-router.post("/admins", protect, authorizeRoles("superAdmin"), createAdmin);
-router.get("/admins", protect, authorizeRoles("superAdmin"), getAdmins);
-router.patch("/admins/:id", protect, authorizeRoles("superAdmin"), updateAdmin);
-router.delete("/admins/:id", protect, authorizeRoles("superAdmin"), deleteAdmin);
+// ADMIN CRUD
+router.post("/admins", protect, authorizeRoles("superadmin"), createAdmin);
+router.get("/admins", protect, authorizeRoles("superadmin"), getAdmins);
+router.patch("/admins/:id", protect, authorizeRoles("superadmin"), updateAdmin);
+router.delete("/admins/:id", protect, authorizeRoles("superadmin"), deleteAdmin);
 
-// 🔹 Driver Management
-router.post("/drivers", protect, authorizeRoles("superAdmin"), createDriver);
-router.get("/drivers", protect, authorizeRoles("superAdmin"), getDrivers);
-router.patch("/drivers/:id", protect, authorizeRoles("superAdmin"), updateDriver);
-router.delete("/drivers/:id", protect, authorizeRoles("superAdmin"), deleteDriver);
-router.post("/drivers/assign-orders", protect, authorizeRoles("superAdmin"), assignOrderToDriver);
+// DRIVER CRUD
+router.post("/drivers", protect, authorizeRoles("superadmin"), createDriver);
+router.get("/drivers", protect, authorizeRoles("superadmin"), getDrivers);
+router.patch("/drivers/:id", protect, authorizeRoles("superadmin"), updateDriver);
+router.delete("/drivers/:id", protect, authorizeRoles("superadmin"), deleteDriver);
 
 // 🔹 Product Management
-router.post("/products", protect, authorizeRoles("superAdmin"), createProduct);
+router.post("/products", protect, authorizeRoles("superadmin"), createProduct);
 router.get("/products", getProducts);
-router.put("/products/:id", protect, authorizeRoles("superAdmin"), updateProduct);
-router.delete("/products/:id", protect, authorizeRoles("superAdmin"), deleteProduct);
+router.put("/products/:id", protect, authorizeRoles("superadmin"), updateProduct);
+router.delete("/products/:id", protect, authorizeRoles("superadmin"), deleteProduct);
 
 // 🔹 Shop Management
-router.post("/shops", protect, authorizeRoles("superAdmin"), createShop);
-router.get("/shops", protect, authorizeRoles("superAdmin"), getAllShops);
-router.get("/shops/:id", protect, authorizeRoles("superAdmin"), getShopById);
-router.patch("/shops/:id", protect, authorizeRoles("superAdmin"), updateShop);
-router.delete("/shops/:id", protect, authorizeRoles("superAdmin"), deleteShop);
-router.patch("/shops/:id/toggle", protect, authorizeRoles("superAdmin"), toggleShopStatus);
+router.post("/shops", protect, authorizeRoles("superadmin"), createShop);
+router.get("/shops", protect, authorizeRoles("superadmin"), getAllShops);
+router.get("/shops/:id", protect, authorizeRoles("superadmin"), getShopById);
+router.patch("/shops/:id", protect, authorizeRoles("superadmin"), updateShop);
+router.delete("/shops/:id", protect, authorizeRoles("superadmin"), deleteShop);
+router.patch("/shops/:id/toggle", protect, authorizeRoles("superadmin"), toggleShopStatus);
 
 // 🔹 Linking
-router.post("/shops/link-drivers", protect, authorizeRoles("superAdmin"), linkDriversToShop);
-router.post("/shops/link-admins", protect, authorizeRoles("superAdmin"), linkAdminsToShop);
+router.post("/shops/link-drivers", protect, authorizeRoles("superadmin"), linkDriversToShop);
+router.post("/shops/link-admins", protect, authorizeRoles("superadmin"), linkAdminsToShop);
+
+
+// our actions
+router.get("/dashboard", protect, authorizeRoles("superadmin"), getSuperAdminDashboard);
+
 
 export default router;

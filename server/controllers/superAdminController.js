@@ -31,25 +31,3 @@ export const createSuperAdmin = async (req, res) => {
   }
 };
 
-// 🔹 POST /api/admin/login — Super admin login
-export const superAdminLogin = async (req, res) => {
-  try {
-    const { mobile, password } = req.body;
-    const user = await User.findOne({ mobile, role: "superAdmin" });
-
-    if (!user) return res.status(404).json({ msg: "Super admin not found" });
-
-    const isMatch = await user.matchPassword(password);
-    if (!isMatch) return res.status(401).json({ msg: "Invalid credentials" });
-
-    const token = generateToken(user._id, user.role);
-    res.status(200).json({
-      msg: "Login successful",
-      user: { id: user._id, name: user.name, mobile: user.mobile },
-      token,
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ msg: "Server error", error: err.message });
-  }
-};

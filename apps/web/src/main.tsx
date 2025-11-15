@@ -8,6 +8,8 @@ import App from './App.tsx'
 
 // ✅ Import the PWA virtual module provided by Vite
 import { registerSW } from 'virtual:pwa-register'
+import { ToastProvider } from './context/ToastContext.tsx'
+import { AuthProvider } from './context/AuthContext.tsx'
 
 // ✅ Register your service worker
 registerSW({
@@ -20,10 +22,14 @@ registerSW({
 })
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
+  // <StrictMode>
     <ThemeProvider theme={theme}>
       <GlobalStyle />
-      <App />
+      <ToastProvider>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </ToastProvider>
     </ThemeProvider>
-  </StrictMode>,
+  // </StrictMode>
 )

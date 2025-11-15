@@ -1,10 +1,10 @@
 import Shop from "../models/Shop.js";
-import Driver from "../models/Driver.js";
+import User from "../models/User.js";
 
 // 🔹 Create Shop
 export const createShop = async (req, res) => {
   try {
-    const { pincode, name, description, openTime, closeTime } = req.body;
+    const { pincode, name, description, openTime, closeTime, adminIds = [], driverIds = [] } = req.body;
 
     // Check duplicate pincode
     const existing = await Shop.findOne({ pincode });
@@ -16,6 +16,8 @@ export const createShop = async (req, res) => {
       description,
       openTime,
       closeTime,
+      admins: adminIds,
+      drivers: driverIds
     });
 
     res.status(201).json({ msg: "Shop created successfully", shop });
@@ -38,11 +40,15 @@ export const getAllShops = async (req, res) => {
 // 🔹 Get Single Shop by ID
 export const getShopById = async (req, res) => {
   try {
-    const shop = await Shop.findById(req.params.id).populate("admins drivers", "name mobile role");
+    const shop = await Shop.findById(req.params.id)
+      .populate("admins", "name mobile role")
+      .populate("drivers", "name mobile role");
+
     if (!shop) return res.status(404).json({ msg: "Shop not found" });
-    res.status(200).json(shop);
-  } catch (err) {
-    res.status(500).json({ msg: "Server error", error: err.message });
+
+    res.json(shop);
+  } catch (error) {
+    res.status(500).json({ msg: "Server error" });
   }
 };
 
@@ -88,24 +94,33 @@ export const linkDriversToShop = async (req, res) => {
   try {
     const { shopId, driverIds } = req.body;
 
+    if (!shopId || !driverIds) {
+      return res.status(400).json({ msg: "shopId and driverIds are required" });
+    }
+
     const shop = await Shop.findById(shopId);
     if (!shop) return res.status(404).json({ msg: "Shop not found" });
 
-    // Link drivers to shop
-    for (const driverId of driverIds) {
-      const driver = await Driver.findById(driverId);
-      if (driver) {
-        if (!driver.assignedPincodes.includes(shop.pincode)) {
-          driver.assignedPincodes.push(shop.pincode);
-          await driver.save();
-        }
+    // Fetch valid driver users
+    const drivers = await User.find({
+      _id: { $in: driverIds },
+      role: "driver",
+    });
+
+    // Update shop side
+    shop.drivers = [...new Set(drivers.map((d) => d._id.toString()))];
+    await shop.save();
+
+    // Update each driver record → assignedShops
+    for (const driver of drivers) {
+      if (!driver.assignedShops) driver.assignedShops = [];
+      if (!driver.assignedShops.includes(shopId)) {
+        driver.assignedShops.push(shopId);
+        await driver.save();
       }
     }
 
-    shop.drivers = [...new Set([...shop.drivers, ...driverIds])];
-    await shop.save();
-
-    res.status(200).json({ msg: "Drivers linked to shop", shop });
+    res.json({ msg: "Drivers linked to shop", shop });
   } catch (error) {
     console.error("❌ linkDriversToShop error:", error);
     res.status(500).json({ msg: "Server error", error: error.message });
@@ -116,13 +131,25 @@ export const linkDriversToShop = async (req, res) => {
 export const linkAdminsToShop = async (req, res) => {
   try {
     const { shopId, adminIds } = req.body;
+
+    if (!shopId || !adminIds) {
+      return res.status(400).json({ msg: "shopId and adminIds are required" });
+    }
+
     const shop = await Shop.findById(shopId);
     if (!shop) return res.status(404).json({ msg: "Shop not found" });
 
-    shop.admins = [...new Set([...shop.admins, ...adminIds])];
+    // Validate admin role
+    const admins = await User.find({
+      _id: { $in: adminIds },
+      role: "admin",
+    });
+
+    // Update shop
+    shop.admins = [...new Set(admins.map((a) => a._id.toString()))];
     await shop.save();
 
-    res.status(200).json({ msg: "Admins linked to shop", shop });
+    res.json({ msg: "Admins linked to shop", shop });
   } catch (error) {
     console.error("❌ linkAdminsToShop error:", error);
     res.status(500).json({ msg: "Server error", error: error.message });

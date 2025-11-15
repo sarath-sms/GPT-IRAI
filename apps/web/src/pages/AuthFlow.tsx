@@ -1,6 +1,11 @@
-import React, { useState } from 'react';
-import styled from 'styled-components';
-import { motion } from 'framer-motion';
+// apps/web/pages/AuthFlow.tsx
+import React, { useState } from "react";
+import styled from "styled-components";
+import { motion } from "framer-motion";
+import EmployeeLoginModal from "@/components/EmployeeLoginModal";
+import { useNavigate } from "react-router-dom";
+import { apiHandler } from "@/utils/apiHandler";
+import { useToast } from "@/context/ToastContext";
 
 const Wrapper = styled.main`
   display: flex;
@@ -11,30 +16,14 @@ const Wrapper = styled.main`
   color: ${({ theme }) => theme.colors.text};
   text-align: center;
   padding: ${({ theme }) => theme.spacing(8)};
-  position: relative;
-  overflow: hidden;
-
-  &::after {
-    content: '';
-    position: absolute;
-    width: 500px;
-    height: 500px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(255, 235, 59, 0.08) 0%, transparent 70%);
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    filter: blur(60px);
-  }
+  min-height: 100vh;
 `;
 
 const Title = styled(motion.h1)`
-  font-size: 2rem;
+  font-size: 1.8rem;
   font-weight: 700;
   color: ${({ theme }) => theme.colors.primary};
-  text-shadow: 0 0 12px rgba(255, 235, 59, 0.4);
-  margin-bottom: ${({ theme }) => theme.spacing(8)};
-  z-index: 1;
+  margin-bottom: ${({ theme }) => theme.spacing(6)};
 `;
 
 const InputGroup = styled.div`
@@ -43,7 +32,6 @@ const InputGroup = styled.div`
   gap: ${({ theme }) => theme.spacing(4)};
   width: 100%;
   max-width: 320px;
-  z-index: 1;
 `;
 
 const Input = styled.input`
@@ -54,151 +42,155 @@ const Input = styled.input`
   color: ${({ theme }) => theme.colors.text};
   font-size: 1rem;
   text-align: center;
-
-  &:focus {
-    outline: none;
-    box-shadow: 0 0 8px rgba(255, 235, 59, 0.4);
-  }
 `;
 
-const Button = styled(motion.button)`
+const Button = styled(motion.button)<{ disabled?: boolean }>`
   margin-top: ${({ theme }) => theme.spacing(6)};
-  background: ${({ theme }) => theme.colors.primary};
+  background: ${({ theme, disabled }) =>
+    disabled ? "rgba(255,255,255,0.12)" : theme.colors.primary};
   color: ${({ theme }) => theme.colors.secondary};
   font-weight: 600;
   font-size: 1rem;
   border-radius: 8px;
   padding: ${({ theme }) => theme.spacing(4)};
   border: none;
-  cursor: pointer;
-  transition: 0.3s ease;
-  box-shadow: 0 4px 10px rgba(255, 235, 59, 0.3);
-
-  &:hover {
-    transform: scale(1.05);
-    opacity: 0.95;
-  }
+  cursor: ${({ disabled }) => (disabled ? "not-allowed" : "pointer")};
 `;
 
-const Message = styled(motion.div)`
-  margin-top: ${({ theme }) => theme.spacing(6)};
-  font-size: 1rem;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.primary};
-  z-index: 1;
+const SmallAnchor = styled.p`
+  margin-top: ${({ theme }) => theme.spacing(4)};
+  color: ${({ theme }) => theme.colors.mutedText};
+  font-size: 0.95rem;
+  cursor: pointer;
+  text-decoration: underline;
 `;
 
 export default function AuthFlow() {
-  const [step, setStep] = useState<'form' | 'otp'>('form');
-  const [pincode, setPincode] = useState('');
-  const [name, setName] = useState('');
-  const [mobile, setMobile] = useState('');
-  const [otp, setOtp] = useState('');
-  const [message, setMessage] = useState('');
+  const [step, setStep] = useState<"form" | "otp">("form");
+  const [pincode, setPincode] = useState("");
+  const [name, setName] = useState("");
+  const [mobile, setMobile] = useState("");
+  const [otp, setOtp] = useState("");
+  const [message, setMessage] = useState("");
+  const [showEmployeeModal, setShowEmployeeModal] = useState(false);
 
-  const availableAreas = ['600125', '600122', '600116'];
+  const navigate = useNavigate();
+  const { showToast } = useToast();
 
-  const handleProceed = () => {
-    if (!pincode || !name || !mobile) {
-      setMessage('⚠️ Please fill all fields.');
-      return;
+  // -----------------------------------
+  // STEP 1 → SEND OTP
+  // -----------------------------------
+  const handleProceed = async () => {
+    if (!pincode || !name || mobile.length !== 10) {
+      return setMessage("⚠️ Please fill all fields correctly.");
     }
 
-    if (!availableAreas.includes(pincode.trim())) {
-      setMessage('🚧 Sorry, we’re expanding soon!');
-      return;
-    }
+    try {
+      const res = await apiHandler.post("/api/user/entry", {
+        name,
+        mobile,
+        pincode,
+      });
 
-    // Mock OTP send
-    const mockOtp = '1234';
-    localStorage.setItem('mockOtp', mockOtp);
-    setMessage('📨 OTP sent successfully!');
-    setStep('otp');
+      setMessage("📨 OTP sent successfully!");
+      setStep("otp");
+    } catch (err: any) {
+      setMessage("");
+      showToast(err, "error");
+    }
   };
 
-  const handleVerify = () => {
-    const storedOtp = localStorage.getItem('mockOtp');
-    if (otp.trim() === storedOtp) {
-      const user = { name, mobile, pincode };
-      localStorage.setItem('iraitchi_user', JSON.stringify(user));
-      setMessage('✅ Verified! Welcome to Iraitchi 🐟');
-      setTimeout(() => {
-        window.location.href = '/products';
-      }, 1500);
-    } else {
-      setMessage('❌ Invalid OTP, please try again.');
+  // -----------------------------------
+  // STEP 2 → VERIFY OTP
+  // -----------------------------------
+  const handleVerify = async () => {
+    if (!otp || otp.length < 4) return;
+
+    try {
+      const res = await apiHandler.post("/api/user/verify", {
+        mobile,
+        otp,
+      });
+
+      const profile = res?.profile;
+      const token = res?.token;
+
+      // save customer session
+      localStorage.setItem("iraitchi_user", JSON.stringify(profile));
+      localStorage.setItem("iraitchi_token", token);
+
+      showToast("Welcome to Iraitchi!", "success");
+      navigate("/products");
+    } catch (err: any) {
+      showToast(err, "error");
     }
   };
 
   return (
     <Wrapper>
       <Title
-        initial={{ opacity: 0, y: -40 }}
+        initial={{ opacity: 0, y: -30 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
+        transition={{ duration: 0.6 }}
       >
         Welcome to Iraitchi 🐟
       </Title>
 
-      {step === 'form' && (
+      {/* STEP 1: CUSTOMER ENTRY */}
+      {step === "form" && (
         <InputGroup>
           <Input
-            type="text"
             placeholder="Enter Pincode"
             value={pincode}
             onChange={(e) => setPincode(e.target.value)}
           />
           <Input
-            type="text"
             placeholder="Enter Name"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
           <Input
-            type="tel"
             placeholder="Enter Mobile"
             value={mobile}
-            onChange={(e) => setMobile(e.target.value)}
+            onChange={(e) =>
+              setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))
+            }
           />
 
-          <Button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleProceed}
-          >
+          <Button whileTap={{ scale: 0.98 }} onClick={handleProceed}>
             Proceed
           </Button>
         </InputGroup>
       )}
 
-      {step === 'otp' && (
+      {/* STEP 2: OTP SCREEN */}
+      {step === "otp" && (
         <InputGroup>
           <Input
-            type="text"
             placeholder="Enter OTP"
             value={otp}
-            onChange={(e) => setOtp(e.target.value)}
+            onChange={(e) =>
+              setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
+            }
           />
-
-          <Button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleVerify}
-          >
+          <Button whileTap={{ scale: 0.98 }} onClick={handleVerify}>
             Verify OTP
           </Button>
         </InputGroup>
       )}
 
       {message && (
-        <Message
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.3 }}
-        >
-          {message}
-        </Message>
+        <p style={{ marginTop: 12, color: "#BFC6DC" }}>{message}</p>
       )}
+
+      <SmallAnchor onClick={() => setShowEmployeeModal(true)}>
+        Are you our employee?
+      </SmallAnchor>
+
+      <EmployeeLoginModal
+        isOpen={showEmployeeModal}
+        onClose={() => setShowEmployeeModal(false)}
+      />
     </Wrapper>
   );
 }

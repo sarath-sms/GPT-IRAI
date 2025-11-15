@@ -1,8 +1,7 @@
 import express from "express";
-import { checkMobNo, checkOtp } from "../controllers/iraiController.js";
+import { checkMobNo, checkOtp } from "../controllers/customerController.js";
 import { placeOrder } from "../controllers/orderController.js";
 import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
-import { getProducts } from "../controllers/productController.js";
 
 const router = express.Router();
 

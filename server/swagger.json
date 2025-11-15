@@ -1,268 +1,656 @@
 {
-    "openapi": "3.0.0",
-    "info": {
-      "title": "Iraitchi API Documentation",
-      "version": "1.0.0",
-      "description": "Comprehensive API reference for Iraitchi backend — covering all roles and modules."
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Iraitchi API",
+    "version": "1.0.0",
+    "description": "OpenAPI 3.0 specification for the Iraitchi delivery service backend (superadmin, admin, driver, user). Auto-generated starter spec."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:4000",
+      "description": "Local development"
+    }
+  ],
+  "tags": [
+    { "name": "Auth", "description": "Login endpoints for different roles" },
+    { "name": "SuperAdmin", "description": "Super admin operations (shops, admins, drivers, products, dashboard)" },
+    { "name": "Admin", "description": "Admin operations (shop-level dashboard, orders, assign)" },
+    { "name": "Driver", "description": "Driver operations (assigned orders, status updates)" },
+    { "name": "User", "description": "Customer endpoints (OTP flow, place orders, profile)" },
+    { "name": "Products", "description": "Public product listing and admin CRUD" },
+    { "name": "Shops", "description": "Shops CRUD and status toggle" },
+    { "name": "Orders", "description": "Orders CRUD and status management" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
     },
-    "tags": [
-      { "name": "SuperAdmin", "description": "SuperAdmin management APIs" },
-      { "name": "Admin", "description": "Admin-level operations" },
-      { "name": "User", "description": "Customer OTP and orders" },
-      { "name": "Driver", "description": "Driver operations and delivery status" },
-      { "name": "Shop", "description": "Shop management" },
-      { "name": "Product", "description": "Product catalog CRUD" }
-    ],
-    "paths": {
-      "/superadmin/create": {
-        "post": {
-          "tags": ["SuperAdmin"],
-          "summary": "Create a SuperAdmin",
-          "requestBody": {
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "name": { "type": "string" },
-                    "mobile": { "type": "string" },
-                    "password": { "type": "string" }
-                  }
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "msg": { "type": "string" },
+          "error": { "type": "string" }
+        }
+      },
+      "AuthRequest": {
+        "type": "object",
+        "properties": {
+          "mobile": { "type": "string", "example": "9876543210" },
+          "password": { "type": "string", "example": "secret123" }
+        },
+        "required": ["mobile", "password"]
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "token": { "type": "string", "example": "eyJhbGci..." },
+          "user": {
+            "$ref": "#/components/schemas/UserShort"
+          }
+        }
+      },
+      "UserShort": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "example": "64f0a1..." },
+          "name": { "type": "string", "example": "John Doe" },
+          "mobile": { "type": "string", "example": "9876543210" },
+          "role": { "type": "string", "example": "admin" }
+        }
+      },
+      "Shop": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string" },
+          "pincode": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "isOpen": { "type": "boolean" },
+          "openTime": { "type": "string" },
+          "closeTime": { "type": "string" },
+          "admins": { "type": "array", "items": { "type": "string" } },
+          "drivers": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "Admin": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string" },
+          "name": { "type": "string" },
+          "mobile": { "type": "string" },
+          "role": { "type": "string", "example": "admin" },
+          "pincodes": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "Driver": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string" },
+          "name": { "type": "string" },
+          "mobile": { "type": "string" },
+          "assignedPincodes": { "type": "array", "items": { "type": "string" } },
+          "assignedOrders": { "type": "array", "items": { "type": "string" } },
+          "isActive": { "type": "boolean" }
+        }
+      },
+      "PriceOption": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string" },
+          "price": { "type": "number" },
+          "available": { "type": "boolean" }
+        }
+      },
+      "CutType": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string" },
+          "price": { "type": "number" }
+        }
+      },
+      "Product": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string" },
+          "name": { "type": "string" },
+          "category": { "type": "string", "example": "fish" },
+          "subCategory": { "type": "string" },
+          "description": { "type": "string" },
+          "image": { "type": "string" },
+          "available": { "type": "boolean" },
+          "priceOptions": { "type": "array", "items": { "$ref": "#/components/schemas/PriceOption" } },
+          "price": { "type": "number" },
+          "netWeight": { "type": "string" },
+          "cutTypes": { "type": "array", "items": { "$ref": "#/components/schemas/CutType" } }
+        }
+      },
+      "OrderItem": {
+        "type": "object",
+        "properties": {
+          "product": { "type": "string" },
+          "name": { "type": "string" },
+          "category": { "type": "string" },
+          "image": { "type": "string" },
+          "size": { "type": "string" },
+          "cutType": { "type": "string" },
+          "netWeight": { "type": "string" },
+          "qty": { "type": "number" },
+          "unitPrice": { "type": "number" },
+          "totalPrice": { "type": "number" }
+        }
+      },
+      "Order": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string" },
+          "user": { "type": "string" },
+          "shop": { "type": "string" },
+          "pincode": { "type": "string" },
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/OrderItem" } },
+          "subtotal": { "type": "number" },
+          "gst": { "type": "number" },
+          "deliveryFee": { "type": "number" },
+          "total": { "type": "number" },
+          "deliverySlot": { "type": "string" },
+          "paymentId": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "paid", "processing", "out-for-delivery", "delivered", "cancelled"]
+          },
+          "address": {
+            "type": "object",
+            "properties": {
+              "houseId": { "type": "string" },
+              "addr1": { "type": "string" },
+              "addr2": { "type": "string" },
+              "geo": {
+                "type": "object",
+                "properties": {
+                  "lat": { "type": "number" },
+                  "long": { "type": "number" }
                 }
               }
             }
           },
-          "responses": { "201": { "description": "SuperAdmin created" } }
+          "driver": { "type": "string" },
+          "admin": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
         }
       },
-      "/superadmin/login": {
-        "post": {
-          "tags": ["SuperAdmin"],
-          "summary": "Login SuperAdmin",
-          "requestBody": {
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "mobile": { "type": "string" },
-                    "password": { "type": "string" }
-                  }
-                }
-              }
+      "OTPEntry": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "mobile": { "type": "string" },
+          "pincode": { "type": "string" }
+        },
+        "required": ["mobile", "pincode"]
+      },
+      "OTPVerify": {
+        "type": "object",
+        "properties": {
+          "mobile": { "type": "string" },
+          "otp": { "type": "string" }
+        },
+        "required": ["mobile", "otp"]
+      },
+      "AssignOrdersPayload": {
+        "type": "object",
+        "properties": {
+          "driverId": { "type": "string" },
+          "orderIds": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["driverId", "orderIds"]
+      }
+    }
+  },
+  "paths": {
+    "/api/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "SuperAdmin login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AuthRequest" },
+              "example": { "mobile": "9876543210", "password": "superSecret" }
             }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthResponse" } } }
           },
-          "responses": { "200": { "description": "Login successful" } }
+          "400": { "description": "Invalid credentials", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
         }
-      },
-      "/superadmin/admins": {
-        "post": {
-          "tags": ["SuperAdmin"],
-          "summary": "Create new admin",
-          "security": [{ "bearerAuth": [] }],
-          "requestBody": {
-            "required": true,
+      }
+    },
+    "/api/admin/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Admin login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AuthRequest" },
+              "example": { "mobile": "9876543211", "password": "adminPass" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Login successful", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthResponse" } } } },
+          "400": { "description": "Invalid credentials", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/api/driver/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Driver login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AuthRequest" },
+              "example": { "mobile": "9876543212", "password": "driverPass" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Login successful", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthResponse" } } } },
+          "400": { "description": "Invalid credentials", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/api/superadmin/dashboard": {
+      "get": {
+        "tags": ["SuperAdmin"],
+        "summary": "SuperAdmin dashboard statistics",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Dashboard stats",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "name": { "type": "string" },
-                    "mobile": { "type": "string" },
-                    "password": { "type": "string" },
-                    "pincodes": {
+                    "totalShops": { "type": "integer", "example": 3 },
+                    "totalAdmins": { "type": "integer", "example": 5 },
+                    "totalDrivers": { "type": "integer", "example": 12 },
+                    "shopList": {
                       "type": "array",
-                      "items": { "type": "string" }
+                      "items": { "$ref": "#/components/schemas/Shop" }
                     }
                   }
                 }
               }
             }
           },
-          "responses": { "201": { "description": "Admin created" } }
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/api/superadmin/shops": {
+      "get": {
+        "tags": ["SuperAdmin", "Shops"],
+        "summary": "Get all shops",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "List of shops",
+            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Shop" } } } }
+          }
+        }
+      },
+      "post": {
+        "tags": ["SuperAdmin", "Shops"],
+        "summary": "Create shop",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "type": "object", "properties": { "pincode": { "type": "string" }, "name": { "type": "string" }, "description": { "type": "string" }, "openTime": { "type": "string" }, "closeTime": { "type": "string" } }, "required": ["pincode", "name"] } } }
         },
-        "get": {
-          "tags": ["SuperAdmin"],
-          "summary": "Get all admins",
-          "security": [{ "bearerAuth": [] }],
-          "responses": { "200": { "description": "List of admins" } }
+        "responses": {
+          "201": { "description": "Shop created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Shop" } } } }
         }
+      }
+    },
+    "/api/superadmin/shops/{id}": {
+      "get": {
+        "tags": ["SuperAdmin", "Shops"],
+        "summary": "Get shop by id",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Shop", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Shop" } } } } }
       },
-      "/admin/login": {
-        "post": {
-          "tags": ["Admin"],
-          "summary": "Admin login",
-          "requestBody": {
-            "required": true,
+      "put": {
+        "tags": ["SuperAdmin", "Shops"],
+        "summary": "Update shop",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object" } } } },
+        "responses": { "200": { "description": "Updated shop", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Shop" } } } } }
+      },
+      "delete": {
+        "tags": ["SuperAdmin", "Shops"],
+        "summary": "Delete shop",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Deleted", "content": { "application/json": { "schema": { "type": "object" } } } } }
+      }
+    },
+    "/api/superadmin/admins": {
+      "get": {
+        "tags": ["SuperAdmin"],
+        "summary": "Get all admins",
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "200": { "description": "Admins list", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Admin" } } } } } }
+      },
+      "post": {
+        "tags": ["SuperAdmin"],
+        "summary": "Create admin",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "properties": { "name": { "type": "string" }, "mobile": { "type": "string" }, "password": { "type": "string" }, "email": { "type": "string" }, "pincodes": { "type": "array", "items": { "type": "string" } } }, "required": ["name", "mobile", "password"] } } } },
+        "responses": { "201": { "description": "Admin created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Admin" } } } } }
+      }
+    },
+    "/api/superadmin/admins/{id}": {
+      "patch": {
+        "tags": ["SuperAdmin"],
+        "summary": "Update admin",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object" } } } },
+        "responses": { "200": { "description": "Admin updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Admin" } } } } }
+      },
+      "delete": {
+        "tags": ["SuperAdmin"],
+        "summary": "Delete admin",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Admin deleted", "content": { "application/json": { "schema": { "type": "object" } } } } }
+      }
+    },
+    "/api/superadmin/drivers": {
+      "get": {
+        "tags": ["SuperAdmin"],
+        "summary": "Get all drivers",
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "200": { "description": "Drivers list", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Driver" } } } } } }
+      },
+      "post": {
+        "tags": ["SuperAdmin"],
+        "summary": "Create driver",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "properties": { "name": { "type": "string" }, "mobile": { "type": "string" }, "password": { "type": "string" }, "assignedPincodes": { "type": "array", "items": { "type": "string" } } }, "required": ["name", "mobile", "password"] } } } },
+        "responses": { "201": { "description": "Driver created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Driver" } } } } }
+      }
+    },
+    "/api/superadmin/drivers/{id}": {
+      "patch": {
+        "tags": ["SuperAdmin"],
+        "summary": "Update driver",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object" } } } },
+        "responses": { "200": { "description": "Driver updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Driver" } } } } }
+      },
+      "delete": {
+        "tags": ["SuperAdmin"],
+        "summary": "Delete driver",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Driver deleted", "content": { "application/json": { "schema": { "type": "object" } } } } }
+      }
+    },
+    "/api/superadmin/products": {
+      "get": {
+        "tags": ["SuperAdmin", "Products"],
+        "summary": "List products (public)",
+        "responses": { "200": { "description": "Products", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Product" } } } } } }
+      },
+      "post": {
+        "tags": ["SuperAdmin", "Products"],
+        "summary": "Create product",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Product" } } } },
+        "responses": { "201": { "description": "Created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Product" } } } } }
+      }
+    },
+    "/api/superadmin/products/{id}": {
+      "put": {
+        "tags": ["SuperAdmin", "Products"],
+        "summary": "Update product",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Product" } } } },
+        "responses": { "200": { "description": "Updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Product" } } } } }
+      },
+      "delete": {
+        "tags": ["SuperAdmin", "Products"],
+        "summary": "Delete product",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Deleted", "content": { "application/json": { "schema": { "type": "object" } } } } }
+      }
+    },
+    "/api/admin/dashboard": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Admin dashboard for selected shop",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "shopId", "in": "query", "required": false, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Shop level data",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "mobile": { "type": "string" },
-                    "password": { "type": "string" }
-                  }
-                }
-              }
-            }
-          },
-          "responses": { "200": { "description": "Login successful" } }
-        }
-      },
-      "/admin/assign-orders": {
-        "post": {
-          "tags": ["Admin"],
-          "summary": "Assign orders to driver",
-          "security": [{ "bearerAuth": [] }],
-          "requestBody": {
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "driverId": { "type": "string" },
-                    "orderIds": {
-                      "type": "array",
-                      "items": { "type": "string" }
+                    "pendingOrders": { "type": "array", "items": { "$ref": "#/components/schemas/Order" } },
+                    "availableDrivers": { "type": "array", "items": { "$ref": "#/components/schemas/Driver" } },
+                    "shop": { "$ref": "#/components/schemas/Shop" },
+                    "stats": {
+                      "type": "object",
+                      "properties": {
+                        "pendingCount": { "type": "integer" },
+                        "processingCount": { "type": "integer" },
+                        "outForDeliveryCount": { "type": "integer" },
+                        "deliveredCount": { "type": "integer" }
+                      }
                     }
                   }
                 }
               }
             }
-          },
-          "responses": { "200": { "description": "Orders assigned" } }
+          }
         }
+      }
+    },
+    "/api/admin/assign-orders": {
+      "post": {
+        "tags": ["Admin"],
+        "summary": "Assign orders to driver",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AssignOrdersPayload" } } } },
+        "responses": { "200": { "description": "Assigned", "content": { "application/json": { "schema": { "type": "object" } } } } }
+      }
+    },
+    "/api/admin/orders/{id}/status": {
+      "patch": {
+        "tags": ["Admin", "Orders"],
+        "summary": "Update single order status",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "properties": { "status": { "type": "string", "example": "processing" } }, "required": ["status"] } } } },
+        "responses": { "200": { "description": "Updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Order" } } } } }
+      }
+    },
+    "/api/driver/orders": {
+      "get": {
+        "tags": ["Driver"],
+        "summary": "Get orders assigned to driver",
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "200": { "description": "Assigned orders", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Order" } } } } } }
+      }
+    },
+    "/api/driver/orders/{id}/status": {
+      "patch": {
+        "tags": ["Driver"],
+        "summary": "Driver update order status (eg delivered)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "properties": { "status": { "type": "string" } }, "required": ["status"] } } } },
+        "responses": { "200": { "description": "Updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Order" } } } } }
+      }
+    },
+    "/api/user/entry": {
+      "post": {
+        "tags": ["User"],
+        "summary": "User entry — request OTP and register or update user",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OTPEntry" } } } },
+        "responses": { "200": { "description": "OTP sent", "content": { "application/json": { "schema": { "type": "object", "properties": { "msg": { "type": "string" }, "data": { "type": "object" } } } } } } }
+      }
+    },
+    "/api/user/verify": {
+      "post": {
+        "tags": ["User"],
+        "summary": "Verify OTP and create session",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OTPVerify" } } } },
+        "responses": { "200": { "description": "Verified", "content": { "application/json": { "schema": { "type": "object", "properties": { "token": { "type": "string" }, "profile": { "$ref": "#/components/schemas/UserShort" } } } } } } }
+      }
+    },
+    "/api/products": {
+      "get": {
+        "tags": ["Products"],
+        "summary": "Get products (filter by category or pincode or q=search)",
+        "parameters": [
+          { "name": "category", "in": "query", "schema": { "type": "string" } },
+          { "name": "pincode", "in": "query", "schema": { "type": "string" } },
+          { "name": "q", "in": "query", "description": "Search by name", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Products", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Product" } } } } } }
       },
-      "/user/entry": {
-        "post": {
-          "tags": ["User"],
-          "summary": "Send OTP for user login/register",
-          "requestBody": {
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "name": { "type": "string" },
-                    "mobile": { "type": "string" },
-                    "pincode": { "type": "string" }
-                  }
-                }
+      "post": {
+        "tags": ["Products", "SuperAdmin"],
+        "summary": "Create product (superadmin only)",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Product" } } } },
+        "responses": { "201": { "description": "Created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Product" } } } } }
+      }
+    },
+    "/api/products/{id}": {
+      "put": {
+        "tags": ["Products", "SuperAdmin"],
+        "summary": "Update product (superadmin only)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Product" } } } },
+        "responses": { "200": { "description": "Updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Product" } } } } }
+      },
+      "delete": {
+        "tags": ["Products", "SuperAdmin"],
+        "summary": "Delete product (superadmin only)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Deleted", "content": { "application/json": { "schema": { "type": "object" } } } } }
+      }
+    },
+    "/api/orders": {
+      "post": {
+        "tags": ["Orders", "User"],
+        "summary": "Place an order",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": { "type": "string" },
+                  "products": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "size": { "type": "string" },
+                        "cutType": { "type": "string" },
+                        "qty": { "type": "number" }
+                      }
+                    }
+                  },
+                  "address": { "type": "object" },
+                  "deliverySlot": { "type": "string" },
+                  "paymentId": { "type": "string" }
+                },
+                "required": ["userId", "products", "deliverySlot"]
               }
             }
-          },
-          "responses": { "200": { "description": "OTP sent" } }
-        }
-      },
-      "/user/verify": {
-        "post": {
-          "tags": ["User"],
-          "summary": "Verify OTP and login user",
-          "requestBody": {
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "mobile": { "type": "string" },
-                    "otp": { "type": "string" }
-                  }
-                }
-              }
-            }
-          },
-          "responses": { "200": { "description": "OTP verified" } }
-        }
-      },
-      "/driver/login": {
-        "post": {
-          "tags": ["Driver"],
-          "summary": "Driver login",
-          "requestBody": {
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "mobile": { "type": "string" },
-                    "password": { "type": "string" }
-                  }
-                }
-              }
-            }
-          },
-          "responses": { "200": { "description": "Login successful" } }
-        }
-      },
-      "/driver/orders": {
-        "get": {
-          "tags": ["Driver"],
-          "summary": "Get all assigned orders for driver",
-          "security": [{ "bearerAuth": [] }],
-          "responses": { "200": { "description": "List of assigned orders" } }
-        }
-      },
-      "/driver/orders/{id}/status": {
-        "patch": {
-          "tags": ["Driver"],
-          "summary": "Update order delivery status",
-          "security": [{ "bearerAuth": [] }],
-          "parameters": [
-            {
-              "in": "path",
-              "name": "id",
-              "required": true,
-              "schema": { "type": "string" },
-              "description": "Order ID"
-            }
-          ],
-          "requestBody": {
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": { "status": { "type": "string" } }
-                }
-              }
-            }
-          },
-          "responses": { "200": { "description": "Status updated" } }
-        }
-      },
-      "/products": {
-        "get": {
-          "tags": ["Product"],
-          "summary": "Get all products",
-          "responses": { "200": { "description": "List of products" } }
+          }
         },
-        "post": {
-          "tags": ["SuperAdmin"],
-          "summary": "Add new product",
-          "security": [{ "bearerAuth": [] }],
-          "requestBody": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "name": { "type": "string" },
-                    "category": { "type": "string" },
-                    "price": { "type": "number" }
-                  }
-                }
-              }
-            }
-          },
-          "responses": { "201": { "description": "Product created" } }
-        }
+        "responses": { "201": { "description": "Order placed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Order" } } } } }
+      },
+      "get": {
+        "tags": ["Orders"],
+        "summary": "Get orders (admins/drivers/users) - use query params to filter",
+        "parameters": [
+          { "name": "userId", "in": "query", "schema": { "type": "string" } },
+          { "name": "shopId", "in": "query", "schema": { "type": "string" } },
+          { "name": "status", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Orders list", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Order" } } } } } }
+      }
+    },
+    "/api/orders/{id}": {
+      "get": {
+        "tags": ["Orders"],
+        "summary": "Get single order",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Order", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Order" } } } } }
+      }
+    },
+    "/api/orders/{id}/status": {
+      "patch": {
+        "tags": ["Orders"],
+        "summary": "Update order status (admin/driver)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "properties": { "status": { "type": "string" } }, "required": ["status"] } } } },
+        "responses": { "200": { "description": "Updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Order" } } } } }
+      }
+    },
+    "/api/shops/{id}/toggle": {
+      "patch": {
+        "tags": ["Shops"],
+        "summary": "Toggle shop open/close",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Toggled", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Shop" } } } } }
+      }
+    },
+    "/api/driver/assign-orders": {
+      "post": {
+        "tags": ["Driver"],
+        "summary": "Driver assigns orders (if allowed)",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AssignOrdersPayload" } } } },
+        "responses": { "200": { "description": "Assigned", "content": { "application/json": { "schema": { "type": "object" } } } } }
       }
     }
   }
-  
+}

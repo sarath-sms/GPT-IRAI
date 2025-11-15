@@ -6,7 +6,7 @@ import mongoose from "mongoose";
 // ✅ Import Role-Based Routes
 import superAdminRoutes from "./routes/superAdminRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
-import userRoutes from "./routes/userRoutes.js";
+import customerRoutes from "./routes/customerRoutes.js";
 import driverRoutes from "./routes/driverRoutes.js";
 
 // ✅ Import Common Routes (Optional)
@@ -45,7 +45,7 @@ app.get("/", (req, res) => {
 // ✅ Role-based Routes
 app.use("/api/superadmin", superAdminRoutes);
 app.use("/api/admin", adminRoutes);
-app.use("/api/user", userRoutes);
+app.use("/api/user", customerRoutes);
 app.use("/api/driver", driverRoutes);
 
 // ✅ Shared Modules

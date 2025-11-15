@@ -1,49 +1,72 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
-const AddressSchema = new mongoose.Schema(
-  { homeId: String, addr1: String, addr2: String },
-  { _id: false }
-);
-
-const VerifySchema = new mongoose.Schema(
+const userSchema = new mongoose.Schema(
   {
-    code: String,
-    expiryTime: Date,
-  },
-  { _id: false }
-);
-
-const UserSchema = new mongoose.Schema(
-  {
-    name: String,
+    // ⭐ Common fields for all users
+    name: { type: String, required: true },
     mobile: { type: String, required: true, unique: true },
-    password: String,
+
+    // ⭐ Password ONLY for employees (superAdmin, admin, driver)
+    password: {
+      type: String,
+      required: function () {
+        return this.role !== "customer"; // customer -> OTP only
+      },
+    },
+
+    // ⭐ Role management
     role: {
       type: String,
-      enum: ["superAdmin", "admin", "driver", "user"],
-      default: "user",
+      enum: ["superadmin", "admin", "driver", "customer"],
+      default: "customer",
     },
-    pincode: String,
-    verify: VerifySchema,
-    address: AddressSchema,
-    orders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }],
-    assignedOrders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }],
+
+    // ⭐ OTP login for customers
+    verify: {
+      code: String,
+      expiryTime: Date,
+    },
+
+    // ⭐ Customer extra details
+    pincode: { type: String },
+    geo: {
+      lat: Number,
+      long: Number,
+    },
+    address: {
+      houseId: String,
+      addr1: String,
+      addr2: String,
+    },
+
+    // ⭐ Link customers to shops
+    shops: [{ type: mongoose.Schema.Types.ObjectId, ref: "Shop" }],
+
+    // ⭐ Admin fields
+    adminShops: [{ type: mongoose.Schema.Types.ObjectId, ref: "Shop" }],
+    aadhaar: String,
+    pan: String,
+
+    // ⭐ Driver fields
+    assignedShops: [{ type: mongoose.Schema.Types.ObjectId, ref: "Shop" }],
+    drivingLicence: String,
   },
   { timestamps: true }
 );
 
-// 🔐 Encrypt password before save (only if modified)
-UserSchema.pre("save", async function (next) {
+// ⭐ Hash password for employees only
+userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
+  if (this.role === "customer") return next(); // customer has no password
+  this.password = await bcrypt.hash(this.password, 10);
   next();
 });
 
-// 🔑 Password verification method
-UserSchema.methods.matchPassword = async function (enteredPassword) {
+// ⭐ Password check for employees
+userSchema.methods.matchPassword = async function (enteredPassword) {
+  if (this.role === "customer") return false;
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-export default mongoose.model("User", UserSchema);
+export default mongoose.model("User", userSchema);
