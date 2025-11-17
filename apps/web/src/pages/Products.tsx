@@ -1,16 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import styled from 'styled-components';
-import { motion, AnimatePresence } from 'framer-motion';
-import ProductModal from '@/components/ProductModal';
-import { category1, category2 } from '@/data/products';
-import { ShoppingCart } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+// apps/web/pages/Products.tsx
+import React, { useState, useEffect } from "react";
+import styled from "styled-components";
+import { motion, AnimatePresence } from "framer-motion";
+import ProductModal from "@/components/ProductModal";
+import { ShoppingCart } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { apiHandler } from "@/utils/apiHandler";
+import { useToast } from "@/context/ToastContext";
 
 const Wrapper = styled.main`
   background-color: ${({ theme }) => theme.colors.secondary};
   color: ${({ theme }) => theme.colors.text};
   padding: ${({ theme }) => theme.spacing(8)};
-  position: relative;
   overflow: hidden;
 `;
 
@@ -59,17 +60,11 @@ const CategoryButton = styled(motion.button)<{ active: boolean }>`
   border-radius: 50px;
   border: 1px solid ${({ theme }) => theme.colors.primary};
   background: ${({ active, theme }) =>
-    active ? theme.colors.primary : 'transparent'};
+    active ? theme.colors.primary : "transparent"};
   color: ${({ active, theme }) =>
     active ? theme.colors.secondary : theme.colors.text};
   font-weight: 600;
   cursor: pointer;
-  transition: 0.3s ease;
-
-  &:hover {
-    opacity: 0.9;
-    transform: scale(1.05);
-  }
 `;
 
 const SearchBox = styled.input`
@@ -83,11 +78,6 @@ const SearchBox = styled.input`
   background: transparent;
   color: ${({ theme }) => theme.colors.text};
   text-align: center;
-
-  &:focus {
-    outline: none;
-    box-shadow: 0 0 8px rgba(255, 235, 59, 0.4);
-  }
 `;
 
 const Grid = styled.div`
@@ -97,36 +87,46 @@ const Grid = styled.div`
 `;
 
 const Card = styled.div`
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: ${({ theme }) => theme.spacing(6)};
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: ${({ theme }) => theme.spacing(4)};
   text-align: center;
   cursor: pointer;
-  transition: 0.3s ease;
+  transition: 0.28s;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(6px);
 
   &:hover {
-    transform: scale(1.03);
-    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-4px) scale(1.02);
+    background: rgba(255, 255, 255, 0.15);
   }
 
   img {
     width: 100%;
-    height: 120px;
+    height: 140px;
     object-fit: cover;
-    border-radius: 8px;
-    margin-bottom: ${({ theme }) => theme.spacing(4)};
+    border-radius: 10px;
+    margin-bottom: ${({ theme }) => theme.spacing(3)};
   }
 
-  h3 {
-    font-size: 1.1rem;
+  .name {
+    font-size: 1.05rem;
+    font-weight: 600;
     color: ${({ theme }) => theme.colors.primary};
-    margin-bottom: ${({ theme }) => theme.spacing(2)};
+    margin-bottom: 4px;
   }
 
-  p {
-    font-size: 0.9rem;
+  .price {
+    font-size: 0.95rem;
+    color: ${({ theme }) => theme.colors.text};
+    opacity: 0.85;
+    margin-bottom: 2px;
+  }
+
+  .desc {
+    font-size: 0.8rem;
     color: ${({ theme }) => theme.colors.mutedText};
+    margin-top: 4px;
   }
 `;
 
@@ -137,112 +137,112 @@ const EmptyState = styled.p`
 `;
 
 export default function Products() {
-  const [category, setCategory] = useState<string>('fish');
-  const [search, setSearch] = useState<string>('');
-  const [debouncedSearch, setDebouncedSearch] = useState<string>('');
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
-  const [cartCount, setCartCount] = useState<number>(0);
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
-  const products = [...category1, ...category2];
+  const [category, setCategory] = useState("fish");
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [products, setProducts] = useState<any[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [cartCount, setCartCount] = useState(0);
 
-  // 🕒 Debounce search (0.8 s)
+  // DEBOUNCE search
   useEffect(() => {
-    const handler = setTimeout(() => setDebouncedSearch(search), 800);
-    return () => clearTimeout(handler);
+    const t = setTimeout(() => setDebouncedSearch(search), 600);
+    return () => clearTimeout(t);
   }, [search]);
 
-  // 🧠 Smart reactive filter
-  const visibleProducts = products.filter((p) => {
-    if (debouncedSearch.trim() !== '') {
-      return p.name.toLowerCase().includes(debouncedSearch.toLowerCase());
-    }
-    const currentCategory = category || 'fish';
-    return p.category === currentCategory;
-  });
+  // FETCH PRODUCTS
+  useEffect(() => {
+    const fetchProducts = async () => {
+      let query = "";
+
+      if (debouncedSearch) query = `?search=${debouncedSearch}`;
+      else if (category) query = `?category=${category}`;
+
+      try {
+        const data = await apiHandler.get(`/api/products${query}`);
+        setProducts(data.products || []);
+      } catch (err) {
+        showToast("Failed to load products", "error");
+      }
+    };
+
+    fetchProducts();
+  }, [category, debouncedSearch]);
 
   useEffect(() => {
-    const cart = JSON.parse(localStorage.getItem('iraitchi_cart') || '[]');
+    const cart = JSON.parse(localStorage.getItem("iraitchi_cart") || "[]");
     setCartCount(cart.length);
   }, [selectedProduct]);
 
   return (
     <Wrapper>
+      {/* HEADER */}
       <Header>
         <h1>Iraitchi</h1>
-        <div className="cart-icon" onClick={() => navigate('/cart')}>
+        <div className="cart-icon" onClick={() => navigate("/cart")}>
           <ShoppingCart size={26} />
           {cartCount > 0 && <span className="cart-count">{cartCount}</span>}
         </div>
       </Header>
 
-      {/* 🔹 Category buttons */}
+      {/* CATEGORY */}
       <CategoryBar>
-        {['fish', 'meat'].map((cat) => (
+        {["fish", "meat", "poultry"].map((cat) => (
           <CategoryButton
             key={cat}
             active={category === cat}
             onClick={() => {
               setCategory(cat);
-              setSearch('');
+              setSearch("");
             }}
-            whileHover={{ scale: 1.05 }}
           >
             {cat.toUpperCase()}
           </CategoryButton>
         ))}
       </CategoryBar>
 
-      {/* 🔹 Search input */}
+      {/* SEARCH */}
       <SearchBox
-        type="text"
         placeholder="Search products..."
         value={search}
         onChange={(e) => {
-          const value = e.target.value;
-          setSearch(value);
-          if (value.trim() !== '') setCategory('');
-          else setCategory('fish'); // default fallback
+          const v = e.target.value;
+          setSearch(v);
+          if (v.trim() !== "") setCategory(""); // reset category
+          else setCategory("fish");
         }}
       />
 
-      {/* 🔹 Product grid with transitions */}
+      {/* LIST */}
       <Grid>
         <AnimatePresence mode="wait">
-          {visibleProducts.length > 0 ? (
-            visibleProducts.map((item) => (
+          {products.length > 0 ? (
+            products.map((item) => (
               <motion.div
-                key={item.id}
+                key={item._id}
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.3, ease: 'easeInOut' }}
               >
                 <Card onClick={() => setSelectedProduct(item)}>
                   <img src={item.image} alt={item.name} />
-                  <h3>{item.name}</h3>
 
-                  {item.category === 'fish' ? (
-                    <>
-                      <p>Base: ₹ {item.priceOptions?.[0]?.price || 0}</p>
-                      <small>Cut Types:</small>
-                      <ul style={{ listStyle: 'none', padding: 0, marginTop: 4 }}>
-                        {item.cutTypes.map((cut: any) => (
-                          <li key={cut.type}>
-                            {cut.type}: +₹{cut.price}
-                          </li>
-                        ))}
-                      </ul>
-                    </>
-                  ) : (
-                    <p>
-                      {item.netWeight} — ₹ {item.price}
-                    </p>
-                  )}
+                  <div className="name">{item.name}</div>
 
-                  <p style={{ color: '#BFC6DC', marginTop: 8 }}>
-                    {item.description}
-                  </p>
+                  <div className="price">
+                    {item.category === "fish" ? (
+                      <>₹ {item.priceOptions?.[0]?.price || 0} / kg</>
+                    ) : (
+                      <>
+                        ₹ {item.price} / {item.netWeight}
+                      </>
+                    )}
+                  </div>
+
+                  <div className="desc">{item.description}</div>
                 </Card>
               </motion.div>
             ))
@@ -251,7 +251,6 @@ export default function Products() {
               key="empty"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
             >
               <EmptyState>No products found</EmptyState>
             </motion.div>
@@ -259,7 +258,7 @@ export default function Products() {
         </AnimatePresence>
       </Grid>
 
-      {/* 🔹 Product Modal */}
+      {/* PRODUCT MODAL */}
       <AnimatePresence>
         {selectedProduct && (
           <ProductModal

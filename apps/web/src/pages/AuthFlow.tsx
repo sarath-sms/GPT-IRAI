@@ -1,11 +1,12 @@
 // apps/web/pages/AuthFlow.tsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import styled from "styled-components";
 import { motion } from "framer-motion";
 import EmployeeLoginModal from "@/components/EmployeeLoginModal";
 import { useNavigate } from "react-router-dom";
 import { apiHandler } from "@/utils/apiHandler";
 import { useToast } from "@/context/ToastContext";
+import { useAuth } from "../context/AuthContext";
 
 const Wrapper = styled.main`
   display: flex;
@@ -71,31 +72,29 @@ export default function AuthFlow() {
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
   const [otp, setOtp] = useState("");
-  const [message, setMessage] = useState("");
   const [showEmployeeModal, setShowEmployeeModal] = useState(false);
+  const { login, user, ready } = useAuth();
 
   const navigate = useNavigate();
   const { showToast } = useToast();
+
+  useEffect(() => {
+    if (ready && user?.role === "customer") {
+      navigate("/products", { replace: true });
+    }
+  }, [ready, user]);
 
   // -----------------------------------
   // STEP 1 → SEND OTP
   // -----------------------------------
   const handleProceed = async () => {
-    if (!pincode || !name || mobile.length !== 10) {
-      return setMessage("⚠️ Please fill all fields correctly.");
-    }
+    if (!pincode || !name || mobile.length !== 10) return;
 
     try {
-      const res = await apiHandler.post("/api/user/entry", {
-        name,
-        mobile,
-        pincode,
-      });
-
-      setMessage("📨 OTP sent successfully!");
+      await apiHandler.post("/api/user/entry", { name, mobile, pincode });
       setStep("otp");
-    } catch (err: any) {
-      setMessage("");
+      showToast("OTP sent!", "success");
+    } catch (err) {
       showToast(err, "error");
     }
   };
@@ -104,7 +103,7 @@ export default function AuthFlow() {
   // STEP 2 → VERIFY OTP
   // -----------------------------------
   const handleVerify = async () => {
-    if (!otp || otp.length < 4) return;
+    if (otp.length < 4) return;
 
     try {
       const res = await apiHandler.post("/api/user/verify", {
@@ -115,13 +114,12 @@ export default function AuthFlow() {
       const profile = res?.profile;
       const token = res?.token;
 
-      // save customer session
-      localStorage.setItem("iraitchi_user", JSON.stringify(profile));
-      localStorage.setItem("iraitchi_token", token);
+      // ⭐ GLOBAL AUTH CONTEXT LOGIN
+      login(profile, token);
 
       showToast("Welcome to Iraitchi!", "success");
-      navigate("/products");
-    } catch (err: any) {
+      navigate("/products", { replace: true });
+    } catch (err) {
       showToast(err, "error");
     }
   };
@@ -177,10 +175,6 @@ export default function AuthFlow() {
             Verify OTP
           </Button>
         </InputGroup>
-      )}
-
-      {message && (
-        <p style={{ marginTop: 12, color: "#BFC6DC" }}>{message}</p>
       )}
 
       <SmallAnchor onClick={() => setShowEmployeeModal(true)}>

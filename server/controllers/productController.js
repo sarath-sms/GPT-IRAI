@@ -15,10 +15,19 @@ export const createProduct = async (req, res) => {
 export const getProducts = async (req, res) => {
   try {
     const search = req.query.search || "";
+    const category = req.query.category || "";
 
-    const query = search
-      ? { name: { $regex: search, $options: "i" } }
-      : {};
+    let query = {};
+
+if (search?.trim()) {
+  query = {
+    $text: { $search: search.trim() }
+  };
+} else if (category?.trim()) {
+  query = {
+    category: category.trim().toLowerCase()
+  };
+}
 
     const products = await Product.find(query);
 

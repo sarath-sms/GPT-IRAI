@@ -1,7 +1,8 @@
+// apps/web/pages/Cart.tsx
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trash2, X } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import BackButton from "@/components/BackButton";
 import { OrderService } from "../services/orderService";
@@ -139,10 +140,24 @@ const Modal = styled.div`
 
 export default function Cart() {
   const navigate = useNavigate();
-  const [cart, setCart] = useState<any[]>(() => JSON.parse(localStorage.getItem("iraitchi_cart") || "[]"));
-  const [user, setUser] = useState<any>(() => JSON.parse(localStorage.getItem("iraitchi_user") || "{}"));
-  const [geo, setGeo] = useState(user.geo || null);
-  const [address, setAddress] = useState(user.address || { houseId: "", addr1: "", addr2: "" });
+
+  // initialize from localStorage
+  const [cart, setCart] = useState<any[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("iraitchi_cart") || "[]");
+    } catch {
+      return [];
+    }
+  });
+
+  const [user, setUser] = useState<any>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("iraitchi_user") || "{}");
+    } catch { return {}; }
+  });
+
+  const [geo, setGeo] = useState<any>(user.geo || null);
+  const [address, setAddress] = useState<any>(user.address || { houseId: "", addr1: "", addr2: "" });
   const [selectedSlot, setSelectedSlot] = useState("");
   const [termsChecked, setTermsChecked] = useState(true);
   const [termsOpen, setTermsOpen] = useState(false);
@@ -160,27 +175,32 @@ export default function Cart() {
     return `${start}${ampm} - ${nextDisplay}${nextAmpm}`;
   });
 
+  // Keep localStorage in sync when cart changes
+  useEffect(() => {
+    try {
+      localStorage.setItem("iraitchi_cart", JSON.stringify(cart));
+    } catch (e) {
+      console.warn("Could not persist cart", e);
+    }
+  }, [cart]);
+
   useEffect(() => {
     if (!cart || cart.length === 0) navigate("/products");
   }, [cart, navigate]);
 
+  // Update quantity by stable id
   const handleQtyChange = useCallback((id: string, change: number) => {
     setCart((prev) => {
       const updated = prev.map((item) =>
-        item.id === id ? { ...item, qty: Math.max(1, (item.qty || 1) + change) } : item
+        item.id === id ? { ...item, qty: Math.max(1, (item.qty || 1) + change), total: Math.max(1, (item.qty || 1) + change) * (item.unitPrice || item.price || 0) } : item
       );
-      localStorage.setItem("iraitchi_cart", JSON.stringify(updated));
       return updated;
     });
   }, []);
 
   const handleRemove = useCallback((id: string) => {
     if (!confirm("Remove this item from cart?")) return;
-    setCart((prev) => {
-      const updated = prev.filter((item) => item.id !== id);
-      localStorage.setItem("iraitchi_cart", JSON.stringify(updated));
-      return updated;
-    });
+    setCart((prev) => prev.filter((item) => item.id !== id));
   }, []);
 
   const handleAddressChange = useCallback(
@@ -189,7 +209,9 @@ export default function Cart() {
         const updatedAddress = { ...prev, [key]: value };
         const updatedUser = { ...user, address: updatedAddress };
         setUser(updatedUser);
-        localStorage.setItem("iraitchi_user", JSON.stringify(updatedUser));
+        try {
+          localStorage.setItem("iraitchi_user", JSON.stringify(updatedUser));
+        } catch {}
         return updatedAddress;
       });
     },
@@ -203,14 +225,21 @@ export default function Cart() {
         setGeo(newGeo);
         const updatedUser = { ...user, geo: newGeo };
         setUser(updatedUser);
-        localStorage.setItem("iraitchi_user", JSON.stringify(updatedUser));
+        try {
+          localStorage.setItem("iraitchi_user", JSON.stringify(updatedUser));
+        } catch {}
       },
       () => alert("Location access denied!")
     );
   }, [user]);
 
+  // subtotal uses unitPrice if present else price; ensures numeric math
   const subtotal = useMemo(() => {
-    return cart.reduce((sum, item) => sum + (item.price + (item.cutFee || 0)) * (item.qty || 1), 0);
+    return cart.reduce((sum, item) => {
+      const unit = Number(item.unitPrice ?? item.price ?? 0) || 0;
+      const qty = Number(item.qty ?? 1) || 1;
+      return sum + unit * qty;
+    }, 0);
   }, [cart]);
 
   const gst = useMemo(() => subtotal * 0.05, [subtotal]);
@@ -221,58 +250,58 @@ export default function Cart() {
     selectedSlot.trim() !== "" &&
     geo?.lat &&
     geo?.long &&
-    address.houseId.trim() !== "" &&
-    address.addr1.trim() !== "" &&
-    address.addr2.trim() !== "" &&
+    address.houseId?.trim() !== "" &&
+    address.addr1?.trim() !== "" &&
+    address.addr2?.trim() !== "" &&
     termsChecked;
 
-    const handlePay = () => {
-        // 1️⃣ create order payload
-        const orderId = "ORD" + Math.floor(1000 + Math.random() * 9000);
-        const date = new Date().toISOString();
-        const subtotalVal = subtotal;
-        const gstVal = gst;
-        const totalVal = subtotal + gst + deliveryFee;
-      
-        const newOrder = {
-          orderId,
-          userId: user._id || "usr-temp",
-          date,
-          items: cart.map((item) => ({
-            id: item.id,
-            name: item.name,
-            qty: item.qty || 1,
-            size: item.size,
-            cutType: item.cutType,
-            price: item.price
-          })),
-          subtotal: subtotalVal,
-          gst: gstVal,
-          deliveryFee,
-          total: totalVal,
-          deliverySlot: selectedSlot,
-          status: "Placed",
-          captions: "Awaiting admin confirmation",
-          userAddress: address,
-          geo
-        };
-        setPendingOrder(newOrder);
-        setShowPaymentPopup(true);
-      };
+  const handlePay = () => {
+    const orderId = "ORD" + Math.floor(1000 + Math.random() * 9000);
+    const date = new Date().toISOString();
+    const subtotalVal = subtotal;
+    const gstVal = gst;
+    const totalVal = subtotal + gst + deliveryFee;
 
-      const handlePaymentResult = (result: "success" | "failure") => {
-        setShowPaymentPopup(false);
-      
-        if (result === "success" && pendingOrder) {
-            OrderService.addOrder(pendingOrder);
-            OrderService.clearCart();
-          // clear cart in success page
-          navigate("/order-success");
-        //   setCart([]);
-        } else {
-          navigate("/order-failed");
-        }
-      };
+    const newOrder = {
+      orderId,
+      userId: user._id || "usr-temp",
+      date,
+      items: cart.map((item) => ({
+        id: item.id,
+        productId: item.productId,
+        name: item.name,
+        qty: item.qty || 1,
+        size: item.size,
+        cutType: item.cutType,
+        unitPrice: item.unitPrice,
+        total: item.total ?? ((item.unitPrice || item.price || 0) * (item.qty || 1)),
+      })),
+      subtotal: subtotalVal,
+      gst: gstVal,
+      deliveryFee,
+      total: totalVal,
+      deliverySlot: selectedSlot,
+      status: "Placed",
+      captions: "Awaiting admin confirmation",
+      userAddress: address,
+      geo
+    };
+    setPendingOrder(newOrder);
+    setShowPaymentPopup(true);
+  };
+
+  const handlePaymentResult = (result: "success" | "failure") => {
+    setShowPaymentPopup(false);
+
+    if (result === "success" && pendingOrder) {
+      OrderService.addOrder(pendingOrder);
+      OrderService.clearCart();
+      setCart([]); // clear local state
+      navigate("/order-success");
+    } else {
+      navigate("/order-failed");
+    }
+  };
 
   return (
     <Wrapper>
@@ -282,26 +311,41 @@ export default function Cart() {
       {/* Cart Items */}
       <Section>
         <AnimatePresence>
-          {cart.map((item) => (
-            <Card key={item.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <div className="details">
-                <strong>{item.name}</strong>
-                <p>Size: {item.size || "-"} | Cut: {item.cutType || "-"}</p>
-                <p>Unit: ₹{item.price}</p>
-                <p>Total: ₹{((item.qty || 1) * item.price).toFixed(2)}</p>
-              </div>
-              <div className="controls">
-                <button className="qty-btn" onClick={() => handleQtyChange(item.id, -1)}>-</button>
-                <motion.span key={item.qty} initial={{ scale: 0.8 }} animate={{ scale: 1 }}>
-                  {item.qty || 1}
-                </motion.span>
-                <button className="qty-btn" onClick={() => handleQtyChange(item.id, 1)}>+</button>
-                <button className="remove-btn" onClick={() => handleRemove(item.id)}>
-                  <Trash2 size={18} />
-                </button>
-              </div>
-            </Card>
-          ))}
+          {cart.map((item) => {
+            const unit = Number(item.unitPrice ?? item.price ?? 0) || 0;
+            const qty = Number(item.qty ?? 1) || 1;
+            const totalItem = unit * qty;
+
+            return (
+              <Card key={item.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <div className="details">
+                  <strong>{item.name}</strong>
+                  <p style={{ marginTop: 4, color: "#BFC6DC" }}>
+                    Size: {item.size} | Cut: {item.cutType}
+                  </p>
+
+                  <p style={{ marginTop: 6, color: "#FFEB3B" }}>
+                    ₹{unit} / unit
+                  </p>
+
+                  <p style={{ marginTop: 4, color: "#BFC6DC" }}>
+                    Total: ₹{totalItem.toFixed(2)}
+                  </p>
+                </div>
+
+                <div className="controls">
+                  <button className="qty-btn" onClick={() => handleQtyChange(item.id, -0.5)}>-</button>
+                  <motion.span key={item.qty} initial={{ scale: 0.8 }} animate={{ scale: 1 }}>
+                    {item.qty || 1}
+                  </motion.span>
+                  <button className="qty-btn" onClick={() => handleQtyChange(item.id, 0.5)}>+</button>
+                  <button className="remove-btn" onClick={() => handleRemove(item.id)}>
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              </Card>
+            );
+          })}
         </AnimatePresence>
       </Section>
 
@@ -369,7 +413,7 @@ export default function Cart() {
         {termsOpen && (
           <Modal as={motion.div} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <div className="content">
-              <X className="close" onClick={() => setTermsOpen(false)} />
+              <div className="close" onClick={() => setTermsOpen(false)}>✕</div>
               <h3>Terms & Conditions</h3>
               <p>
                 By placing your order, you agree that Iraitchi ensures the freshest seafood, meat, and poultry sourced directly from trusted markets.
@@ -379,36 +423,23 @@ export default function Cart() {
           </Modal>
         )}
       </AnimatePresence>
+
+      {/* Payment simulation popup */}
       <AnimatePresence>
-  {showPaymentPopup && (
-    <Modal
-      as={motion.div}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-    >
-      <div className="content">
-        <X className="close" onClick={() => setShowPaymentPopup(false)} />
-        <h3>Simulate Payment Result</h3>
-        <p>Select a payment outcome to continue:</p>
-        <div style={{ marginTop: "20px", display: "flex", gap: "20px" }}>
-          <Button
-            whileTap={{ scale: 0.95 }}
-            onClick={() => handlePaymentResult("success")}
-          >
-            ✅ Success
-          </Button>
-          <Button
-            whileTap={{ scale: 0.95 }}
-            onClick={() => handlePaymentResult("failure")}
-          >
-            ❌ Failure
-          </Button>
-        </div>
-      </div>
-    </Modal>
-  )}
-</AnimatePresence>
+        {showPaymentPopup && (
+          <Modal as={motion.div} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <div className="content">
+              <div className="close" onClick={() => setShowPaymentPopup(false)}>✕</div>
+              <h3>Simulate Payment Result</h3>
+              <p>Select a payment outcome to continue:</p>
+              <div style={{ marginTop: "20px", display: "flex", gap: "20px" }}>
+                <Button whileTap={{ scale: 0.95 }} onClick={() => handlePaymentResult("success")}>✅ Success</Button>
+                <Button whileTap={{ scale: 0.95 }} onClick={() => handlePaymentResult("failure")}>❌ Failure</Button>
+              </div>
+            </div>
+          </Modal>
+        )}
+      </AnimatePresence>
     </Wrapper>
   );
 }

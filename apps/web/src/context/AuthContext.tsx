@@ -1,5 +1,12 @@
 // apps/web/context/AuthContext.tsx
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+} from "react";
 
 type UserType = {
   id?: string;
@@ -13,9 +20,9 @@ type AuthContextType = {
   user: UserType | null;
   token: string | null;
   role: string | null;
+  ready: boolean;
   login: (user: UserType, token: string) => void;
   logout: () => void;
-  ready: boolean;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -26,20 +33,20 @@ export const useAuth = () => {
   return ctx;
 };
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<UserType | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
-  // on mount, hydrate from localStorage
+  // Hydrate from localStorage
   useEffect(() => {
     try {
-      const rawToken = localStorage.getItem("token");
       const rawUser = localStorage.getItem("user");
+      const rawToken = localStorage.getItem("token");
       if (rawToken) setToken(rawToken);
       if (rawUser) setUser(JSON.parse(rawUser));
     } catch (e) {
-      console.error("Auth hydrate error", e);
+      console.error("Auth hydrate error:", e);
     } finally {
       setReady(true);
     }
@@ -48,32 +55,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = useCallback((u: UserType, t: string) => {
     setUser(u);
     setToken(t);
-    // persist
+
     try {
-      localStorage.setItem("token", t);
       localStorage.setItem("user", JSON.stringify(u));
+      localStorage.setItem("token", t);
     } catch (e) {
-      console.error("Auth persist error", e);
+      console.error("Persist error:", e);
     }
   }, []);
 
   const logout = useCallback(() => {
     setUser(null);
     setToken(null);
+
     try {
-      localStorage.removeItem("token");
       localStorage.removeItem("user");
+      localStorage.removeItem("token");
     } catch (e) {
-      console.error("Auth clear error", e);
+      console.error("Logout error:", e);
     }
-    // optionally navigate to home - handled externally
   }, []);
 
-  const role = user?.role || null;
+  const role = user?.role || "customer";
 
   const value = useMemo(
-    () => ({ user, token, role, login, logout, ready }),
-    [user, token, role, login, logout, ready]
+    () => ({ user, token, role, ready, login, logout }),
+    [user, token, role, ready, login, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

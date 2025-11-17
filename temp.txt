@@ -1,0 +1,11 @@
+thank you bro! And love you once again😘
+
+now, we go to our fix: 
+Issue:
+verify otp succss toast rendered - done
+redirection happening. i.e. url changes happen in browser - done
+but product page content is not
+i'll paste related file's code and seperated by line -----X-----
+
+
+

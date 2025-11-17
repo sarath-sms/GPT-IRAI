@@ -1,32 +1,34 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { useAuth } from "./context/AuthContext";
 
 import AuthFlow from "./pages/AuthFlow";
 import Products from "./pages/Products";
 import Profile from "./pages/Profile";
-import Feedback from "./pages/Feedback";
-import Invoice from "./pages/Invoice";
 import Cart from "./pages/Cart";
+import Invoice from "./pages/Invoice";
 import OrderSuccess from "./pages/order-success";
 import OrderFailed from "./pages/order-failed";
-
-import EmployeeDashboard from "./pages/employee/Dashboard";
-import AdminList from "./pages/employee/superAdmin/AdminList";
+import Feedback from "./pages/Feedback";
 
 import EmployeeProtected from "./routes/EmployeeProtected";
+import EmployeeDashboard from "./pages/employee/Dashboard";
+import AdminList from "./pages/employee/superAdmin/AdminList";
 import DriverList from "./pages/employee/superAdmin/DriverList";
 import ProductList from "./pages/employee/superAdmin/ProductList";
 import ShopList from "./pages/employee/superAdmin/ShopList";
 
 export default function App() {
-  const isCustomerLoggedIn = !!localStorage.getItem("iraitchi_user");
+  const { user, role, ready } = useAuth();
+console.log("✅✅✅")
+console.log(user, role)
+  if (!ready) return null; // Prevent flicker
+
+  const isCustomer = role === "customer";
 
   return (
     <Router>
       <Routes>
-
-        {/* -------------------------------------
-            EMPLOYEE FLOW (SEPARATE)
-        ------------------------------------- */}
+        {/* EMPLOYEE ROUTES */}
         <Route
           path="/dashboard"
           element={
@@ -44,7 +46,7 @@ export default function App() {
             </EmployeeProtected>
           }
         />
-        
+
         <Route
           path="/superadmin/drivers"
           element={
@@ -53,7 +55,7 @@ export default function App() {
             </EmployeeProtected>
           }
         />
-        
+
         <Route
           path="/superadmin/products"
           element={
@@ -62,6 +64,7 @@ export default function App() {
             </EmployeeProtected>
           }
         />
+
         <Route
           path="/superadmin/shops"
           element={
@@ -71,15 +74,8 @@ export default function App() {
           }
         />
 
-        {/* Later: */}
-        {/* <Route path="/dashboard/drivers" element={<EmployeeProtected><DriverList /></EmployeeProtected>} /> */}
-        {/* <Route path="/dashboard/shops" element={<EmployeeProtected><ShopList /></EmployeeProtected>} /> */}
-
-
-        {/* -------------------------------------
-            CUSTOMER FLOW (DEFAULT)
-        ------------------------------------- */}
-        {!isCustomerLoggedIn ? (
+        {/* CUSTOMER FLOW */}
+        {!isCustomer ? (
           <Route path="*" element={<AuthFlow />} />
         ) : (
           <>
@@ -94,7 +90,6 @@ export default function App() {
             <Route path="/feedback" element={<Feedback />} />
           </>
         )}
-
       </Routes>
     </Router>
   );

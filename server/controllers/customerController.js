@@ -36,7 +36,7 @@ export const checkMobNo = async (req, res) => {
         name,
         mobile,
         pincode,
-        role: "user",
+        role: "customer",
         verify: { code: otp, expiryTime },
         shops: [shop._id],
       });
