@@ -7,6 +7,7 @@ import { ShoppingCart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { apiHandler } from "@/utils/apiHandler";
 import { useToast } from "@/context/ToastContext";
+import BottomNav from "../components/BottomNav";
 
 const Wrapper = styled.main`
   background-color: ${({ theme }) => theme.colors.secondary};
@@ -173,7 +174,7 @@ export default function Products() {
   }, [category, debouncedSearch]);
 
   useEffect(() => {
-    const cart = JSON.parse(localStorage.getItem("iraitchi_cart") || "[]");
+    const cart = JSON.parse(sessionStorage.getItem("iraitchi_cart") || "[]");
     setCartCount(cart.length);
   }, [selectedProduct]);
 
@@ -182,10 +183,10 @@ export default function Products() {
       {/* HEADER */}
       <Header>
         <h1>Iraitchi</h1>
-        <div className="cart-icon" onClick={() => navigate("/cart")}>
+        {/* <div className="cart-icon" onClick={() => navigate("/cart")}>
           <ShoppingCart size={26} />
           {cartCount > 0 && <span className="cart-count">{cartCount}</span>}
-        </div>
+        </div> */}
       </Header>
 
       {/* CATEGORY */}
@@ -267,6 +268,7 @@ export default function Products() {
           />
         )}
       </AnimatePresence>
+      <BottomNav />
     </Wrapper>
   );
 }

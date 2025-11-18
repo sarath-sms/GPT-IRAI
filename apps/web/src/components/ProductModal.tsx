@@ -1,7 +1,7 @@
 // apps/web/components/ProductModal.tsx
-import React, { useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import CutTypes from "./productModal/CutTypes";
 import { useNavigate } from "react-router-dom";
@@ -112,73 +112,86 @@ const AddBtn = styled.button`
   cursor: pointer;
 `;
 
-const ActionsRow = styled.div`
-  margin-top: 12px;
-  display:flex;
-  gap:12px;
-  align-items:center;
-`;
-
 /**
  * ProductModal
+ *
  * Props:
- * - product: product object (expects _id, name, image, priceOptions[], price, cutTypes[])
+ * - product: product object (expects _id, name, image, priceOptions[], cutTypes[], price, category)
  * - onClose: () => void
  */
 export default function ProductModal({ product, onClose }: any) {
   const navigate = useNavigate();
+
+  // chosen cutType (single global for this product modal)
   const [cutType, setCutType] = useState<any>(null);
+
+  // qtyMap: { [sizeType]: number }
   const [qtyMap, setQtyMap] = useState<Record<string, number>>({});
 
+  // helper: read cart and write cart
   const readCart = () => {
     try {
-      return JSON.parse(localStorage.getItem("iraitchi_cart") || "[]");
+      return JSON.parse(sessionStorage.getItem("iraitchi_cart") || "[]");
     } catch {
       return [];
     }
   };
+  const writeCart = (c: any[]) => {
+    try {
+      sessionStorage.setItem("iraitchi_cart", JSON.stringify(c));
+    } catch (e) {
+      console.warn("Failed to write cart", e);
+    }
+  };
 
-  // When modal opens: hydrate qtyMap + default cut
+  // stable id generator for cart entries (productId|size|cut)
+  const keyFor = (productId: string, size: string, cutName: string) =>
+    `${productId}||${size}||${cutName}`;
+
+  // On open: hydrate qtyMap and cutType from existing cart entries for this product
   useEffect(() => {
     if (!product) return;
+
     const cart = readCart();
     const map: Record<string, number> = {};
+    // Prefer first entry's cutType if exists
     let preferredCut: any = null;
 
     for (const c of cart) {
       if (c.productId === product._id) {
         map[c.size] = (map[c.size] || 0) + (c.qty || 0);
-        if (!preferredCut && c.cutType) {
-          preferredCut = { type: c.cutType, price: c.cutFee || 0 };
-        }
+        if (!preferredCut && c.cutType) preferredCut = { type: c.cutType, price: c.cutFee || 0 };
       }
     }
 
-    if (!preferredCut) {
-      // pick first cut type, prefer one with 0 price if exists
-      if (product.cutTypes?.length) {
-        preferredCut = product.cutTypes.find((ct: any) => ct.price === 0) || product.cutTypes[0];
-      } else {
-        preferredCut = { type: "Standard", price: 0 };
-      }
+    // fallback: pick first cut type or default null
+    if (!preferredCut && product.cutTypes?.length) {
+      preferredCut = product.cutTypes[0];
+    }
+
+    // If product has no priceOptions (meat/poultry), ensure we show a default size option "Standard"
+    if ((!product.priceOptions || product.priceOptions.length === 0) && !map["Standard"]) {
+      // if there's already a cart entry for Standard, keep it; else set 0
+      map["Standard"] = map["Standard"] || 0;
     }
 
     setQtyMap(map);
     setCutType(preferredCut);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [product?._id]);
+  }, [product]);
 
-  // utility: compute unit price for a size option (handles priceOptions or fixed price)
+  // compute derived unit price for a given size option
   const unitPriceFor = (sizeOpt: any) => {
-    const base = sizeOpt?.price ?? product?.price ?? 0;
-    const cut = (cutType?.price ?? 0);
-    // ensure numeric
-    const b = Number(base) || 0;
-    const c = Number(cut) || 0;
+    // If product has priceOptions, use sizeOpt.price. Otherwise use product.price
+    const base = sizeOpt?.price ?? product.price ?? 0;
+    const cut = cutType?.price ?? 0;
+    // ensure numbers
+    const b = typeof base === "number" ? base : Number(base || 0);
+    const c = typeof cut === "number" ? cut : Number(cut || 0);
     return b + c;
   };
 
-  // update qty in UI only
+  // handle increment/decrement in UI (does NOT persist fully to cart until we sync)
   const updateQty = (size: string, delta: number) => {
     setQtyMap((prev) => {
       const cur = prev[size] || 0;
@@ -192,96 +205,89 @@ export default function ProductModal({ product, onClose }: any) {
     });
   };
 
-  // Build canonical item id
-  const makeId = (productId: string, size: string, cutName: string) => {
-    return `${productId}-${size}-${cutName}`.replace(/\s+/g, "-").toLowerCase();
-  };
+  // merge this product entries into cart (replace any entries with same productId)
+  const syncProductToCart = () => {
+    const cart = readCart();
+    // remove existing entries for this product (we'll re-add from qtyMap)
+    const other = cart.filter((c: any) => c.productId !== product._id);
 
-  // Persist qtyMap into cart atomically (merge entries)
-  const sizeOptions = product.priceOptions?.length
-? product.priceOptions
-: [{ type: product.netWeight || "Default", price: product.price }];
-  const saveQtyMapToCart = () => {
-    const cart: any[] = readCart();
-    const nextCart = [...cart];
-
-
-    for (const opt of sizeOptions) {
-      const size = opt.type;
+    // for each qtyMap entry create/recreate stable entry
+    const newEntries: any[] = [];
+    for (const size of Object.keys(qtyMap)) {
       const q = qtyMap[size] || 0;
-      const cutName = (cutType?.type || "Standard");
-      const cutFee = Number(cutType?.price || 0) || 0;
-      const unitPrice = unitPriceFor(opt);
-      const total = unitPrice * q;
-      const id = makeId(product._id, size, cutName);
+      if (q <= 0) continue;
+      // find corresponding price option if exists
+      const sizeOpt = (product.priceOptions ?? []).find((p: any) => p.type === size);
+      const unitPrice = unitPriceFor(sizeOpt);
+      const cutName = cutType?.type || "Standard";
+      const cutFee = cutType?.price || 0;
+      const id = keyFor(product._id, size, cutName);
 
-      const idx = nextCart.findIndex((c) => c.id === id);
-
-      if (q > 0) {
-        const entry = {
-          id,
-          productId: product._id,
-          name: product.name,
-          size,
-          qty: q,
-          cutType: cutName,
-          cutFee,
-          unitPrice,
-          total,
-          image: product.image,
-        };
-        if (idx >= 0) {
-          // update existing
-          nextCart[idx] = { ...nextCart[idx], ...entry };
-        } else {
-          nextCart.push(entry);
-        }
-      } else {
-        // q === 0 => remove if exists
-        if (idx >= 0) nextCart.splice(idx, 1);
-      }
+      newEntries.push({
+        id,
+        productId: product._id,
+        name: product.name,
+        category: product.category || "",
+        size,
+        qty: q,
+        cutType: cutName,
+        cutFee,
+        unitPrice,
+        price: unitPrice, // legacy field used across app
+        total: unitPrice * q,
+        image: product.image,
+      });
     }
 
-    try {
-      localStorage.setItem("iraitchi_cart", JSON.stringify(nextCart));
-    } catch (e) {
-      console.warn("Failed to write cart", e);
-    }
+    const merged = [...other, ...newEntries];
+    writeCart(merged);
+    return merged;
   };
 
-  // when qtyMap or cutType changes, sync to storage live — this avoids doubling when modal closes
+  // Whenever qtyMap or cutType changes we persist the product entries live,
+  // but we avoid doubling by replacing product-specific entries.
   useEffect(() => {
+    // avoid running when product missing
     if (!product) return;
-    saveQtyMapToCart();
+    // perform lighter sync only if qtyMap reflects change (this keeps UI persistent)
+    syncProductToCart();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qtyMap, cutType]);
 
-  // Primary add action (keeps current qtyMap as is, storage already synced)
+  // handle Add to Cart (explicit): keep cart already in sync; just close modal
   const handleAddToCart = () => {
-    // storage already synced via effect; provide slight UI feedback by closing
+    syncProductToCart();
     onClose();
   };
 
-  // Buy now: ensure saved + navigate to cart
+  // Buy Now: ensure add then go to cart
   const handleBuyNow = () => {
-    saveQtyMapToCart(); // make sure persisted
+    syncProductToCart();
     onClose();
     navigate("/cart");
   };
 
-  // computed totals for display
-  const itemsCount = Object.values(qtyMap).reduce((s, v) => s + (v || 0), 0);
-  const subtotal = (product.priceOptions ?? [{ price: product.price ?? 0 }])
-    .reduce((sum: number, opt: any) => {
-      const q = qtyMap[opt.type] || 0;
-      return sum + (unitPriceFor(opt) * q);
-    }, 0);
+  // convenience: total count for this product
+  const productTotalCount = useMemo(
+    () => Object.values(qtyMap).reduce((s, v) => s + (v || 0), 0),
+    [qtyMap]
+  );
 
   if (!product) return null;
 
+  // prepare sizes list (if none, provide a "Standard" pseudo-size)
+  const sizes = (product.priceOptions && product.priceOptions.length > 0)
+    ? product.priceOptions
+    : [{ type: "Standard", price: product.price ?? 0 }];
+
   return (
     <AnimatePresence>
-      <Overlay onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+      <Overlay
+        onClick={onClose}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+      >
         <ModalBox
           onClick={(e) => e.stopPropagation()}
           initial={{ scale: 0.92, opacity: 0 }}
@@ -307,14 +313,15 @@ export default function ProductModal({ product, onClose }: any) {
           <Section>
             <strong>Select sizes / quantities</strong>
             <div style={{ marginTop: 10 }}>
-              {sizeOptions.map((opt: any) => {
-                const q = qtyMap[opt.type] || 0;
+              {sizes.map((opt: any) => {
+                const sKey = opt.type;
+                const q = qtyMap[sKey] || 0;
                 const unitPrice = unitPriceFor(opt);
                 const total = unitPrice * q;
                 return (
-                  <SizeCard key={opt.type}>
+                  <SizeCard key={sKey}>
                     <Left>
-                      <div style={{ fontWeight: 700 }}>{opt.type}</div>
+                      <div style={{ fontWeight: 700 }}>{sKey}</div>
                       <div style={{ color: "#FFEB3B", marginTop: 6 }}>₹{unitPrice} / unit</div>
                       {q > 0 && <div style={{ color: "#BFC6DC", marginTop: 6 }}>Total: ₹{total}</div>}
                     </Left>
@@ -322,12 +329,16 @@ export default function ProductModal({ product, onClose }: any) {
                     <Right>
                       {q > 0 ? (
                         <QtyControls>
-                          <button onClick={() => updateQty(opt.type, -0.5)} aria-label="decrease">-</button>
+                          <button onClick={() => updateQty(sKey, -1)} aria-label="decrease">
+                            -
+                          </button>
                           <span>{q}</span>
-                          <button onClick={() => updateQty(opt.type, +0.5)} aria-label="increase">+</button>
+                          <button onClick={() => updateQty(sKey, +1)} aria-label="increase">
+                            +
+                          </button>
                         </QtyControls>
                       ) : (
-                        <AddBtn onClick={() => updateQty(opt.type, +1)}>ADD</AddBtn>
+                        <AddBtn onClick={() => updateQty(sKey, +1)}>ADD</AddBtn>
                       )}
                     </Right>
                   </SizeCard>
@@ -336,18 +347,22 @@ export default function ProductModal({ product, onClose }: any) {
             </div>
           </Section>
 
-          {/* Summary + Actions */}
+          {/* Summary + Save */}
           <div style={{ marginTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
             <div>
               <div style={{ color: "#BFC6DC", fontSize: 14 }}>Items</div>
-              <div style={{ fontWeight: 700, marginTop: 4 }}>{itemsCount}</div>
-              <div style={{ color: "#BFC6DC", fontSize: 12 }}>Subtotal: ₹{subtotal.toFixed(2)}</div>
+              <div style={{ fontWeight: 700, marginTop: 4 }}>{productTotalCount}</div>
             </div>
             <div style={{ flex: 1 }} />
-            <ActionsRow>
-              <AddBtn onClick={handleAddToCart}>Save</AddBtn>
-              <AddBtn onClick={handleBuyNow}>Buy Now</AddBtn>
-            </ActionsRow>
+            <AddBtn onClick={handleAddToCart}>
+              Add to cart
+            </AddBtn>
+          </div>
+
+          <div style={{ marginTop: 10 }}>
+            <button style={{ width: "100%", padding: 10, marginTop: 8 }} onClick={handleBuyNow}>
+              Buy Now
+            </button>
           </div>
         </ModalBox>
       </Overlay>

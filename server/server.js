@@ -12,6 +12,7 @@ import driverRoutes from "./routes/driverRoutes.js";
 // ✅ Import Common Routes (Optional)
 import productRoutes from "./routes/productRoutes.js";
 import shopRoutes from "./routes/shopRoutes.js";
+import feedbackRoutes from "./routes/feedbackRoutes.js";
 
 // TODO: remove before production
 import { swaggerDocs } from "./swagger.js";
@@ -51,6 +52,7 @@ app.use("/api/driver", driverRoutes);
 // ✅ Shared Modules
 app.use("/api/products", productRoutes);
 app.use("/api/shops", shopRoutes);
+app.use("/api/feedback", feedbackRoutes);
 // TODO: remove before production
 swaggerDocs(app);
 

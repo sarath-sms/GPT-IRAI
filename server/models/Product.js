@@ -40,8 +40,20 @@ const ProductSchema = new mongoose.Schema(
 
 // ⭐⭐⭐ ADD INDEX HERE — MUST be before model export ⭐⭐⭐
 ProductSchema.index(
-  { name: "text", description: "text" },
-  { weights: { name: 5, description: 1 } } // optional: improve relevance ranking
+  {
+    name: "text",
+    keywords: "text",
+    category: "text",
+    description: "text"
+  },
+  {
+    weights: {
+      name: 10,       // customer searches mainly by product name
+      keywords: 5,    // autocomplete, alternate names, tags
+      category: 2,    // seafood, meat, poultry
+      description: 1  // lowest priority
+    }
+  }
 );
 
 export default mongoose.model("Product", ProductSchema);

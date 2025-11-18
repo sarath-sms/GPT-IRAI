@@ -14,26 +14,64 @@ export const createProduct = async (req, res) => {
 // GET /api/superadmin/products?search=
 export const getProducts = async (req, res) => {
   try {
-    const search = req.query.search || "";
-    const category = req.query.category || "";
+    const search = req.query.search?.trim() || "";
+    const category = req.query.category?.trim()?.toLowerCase() || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = 20;
+    const skip = (page - 1) * limit;
 
-    let query = {};
+    let pipeline = [];
 
-if (search?.trim()) {
-  query = {
-    $text: { $search: search.trim() }
-  };
-} else if (category?.trim()) {
-  query = {
-    category: category.trim().toLowerCase()
-  };
-}
+    // 1️⃣ TEXT SEARCH MUST BE FIRST
+    if (search) {
+      pipeline.push({
+        $match: { $text: { $search: search } }
+      });
 
-    const products = await Product.find(query);
+      pipeline.push({
+        $addFields: { score: { $meta: "textScore" } }
+      });
+
+      pipeline.push({ $sort: { score: -1 } });
+    }
+
+    // 2️⃣ Category filter AFTER text search
+    if (category) {
+      pipeline.push({
+        $match: { category }
+      });
+    }
+
+    // 3️⃣ Pagination
+    pipeline.push({ $skip: skip });
+    pipeline.push({ $limit: limit });
+
+    let products = [];
+
+    // Run aggregation if text search used
+    if (search) {
+      products = await Product.aggregate(pipeline);
+    } else {
+      // No search → normal find
+      products = await Product.find(category ? { category } : {})
+        .skip(skip)
+        .limit(limit);
+    }
+
+    // 4️⃣ FALLBACK → if text search returns 0 results → use REGEX
+    if (search && products.length === 0) {
+      products = await Product.find({
+        ...(category && { category }),
+        name: { $regex: search, $options: "i" }
+      })
+        .skip(skip)
+        .limit(limit);
+    }
 
     res.json({
       msg: "Products fetched",
       count: products.length,
+      page,
       products
     });
 
@@ -42,6 +80,9 @@ if (search?.trim()) {
     res.status(500).json({ msg: "Server error" });
   }
 };
+
+
+
 
 // 🔹 Update Product
 export const updateProduct = async (req, res) => {

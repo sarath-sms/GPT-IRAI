@@ -67,6 +67,7 @@ const SmallAnchor = styled.p`
 `;
 
 export default function AuthFlow() {
+  console.log("🔥")
   const [step, setStep] = useState<"form" | "otp">("form");
   const [pincode, setPincode] = useState("");
   const [name, setName] = useState("");

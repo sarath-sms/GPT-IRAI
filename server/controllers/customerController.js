@@ -117,3 +117,64 @@ export const checkOtp = async (req, res) => {
     }
   };
   
+  // controllers/userController.js
+
+
+export const getProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password -verify");
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    res.json({ success: true, profile: user });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+
+export const updateProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;  // from auth middleware
+    const { name, pincode, geo, address } = req.body;
+
+    const updates = {};
+
+    if (name) updates.name = name;
+    if (pincode) updates.pincode = pincode;
+
+    if (geo) {
+      updates.geo = {
+        lat: geo.lat,
+        long: geo.long
+      };
+    }
+
+    if (address) {
+      updates.address = {
+        houseId: address.houseId,
+        addr1: address.addr1,
+        addr2: address.addr2
+      };
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: updates },
+      { new: true }
+    ).select("-password -verify");
+
+    res.json({
+      success: true,
+      message: "Profile updated successfully",
+      profile: updatedUser,
+    });
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};

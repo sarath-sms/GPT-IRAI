@@ -8,10 +8,10 @@ export const OrderService = {
   },
 
   clearCart: () => {
-    localStorage.setItem("iraitchi_cart", "[]");
+    sessionStorage.setItem("iraitchi_cart", "[]");
   },
 
-  getCart: () => JSON.parse(localStorage.getItem("iraitchi_cart") || "[]"),
+  getCart: () => JSON.parse(sessionStorage.getItem("iraitchi_cart") || "[]"),
 
   getUser: () => JSON.parse(localStorage.getItem("iraitchi_user") || "{}"),
 

@@ -31,7 +31,7 @@ export default function OrderSuccess() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    localStorage.setItem("iraitchi_cart", "[]");
+    sessionStorage.setItem("iraitchi_cart", "[]");
     console.log("✅ Order placed successfully!");
   }, []);
 
