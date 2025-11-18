@@ -1,5 +1,7 @@
 // src/styles/theme.ts
-export const theme = {
+import { DefaultTheme } from 'styled-components';
+
+export const theme: DefaultTheme = {
     colors: {
       primary: '#FFEB3B',      // Bright yellow accent
       secondary: '#26355D',    // Deep navy - background
