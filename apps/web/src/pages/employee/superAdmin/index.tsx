@@ -4,6 +4,8 @@ import styled from "styled-components";
 import { apiHandler } from "@/utils/apiHandler";
 import { useToast } from "@/context/ToastContext";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
+import LogoutButton from "@/components/LogoutButton";
 
 const Wrapper = styled.main`
   padding: 1.5rem;
@@ -98,6 +100,7 @@ export default function SuperAdminDashboard() {
           <p>Management</p>
         </Card>
       </CardGrid>
+      <LogoutButton />
     </Wrapper>
   );
 }
