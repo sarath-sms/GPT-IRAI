@@ -19,6 +19,11 @@ const ShopSchema = new mongoose.Schema(
   
       // 🔹 Orders
       orders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }],
+      // ⭐ new structured date-based order grouping
+      orderTree: {
+        type: Object,
+        default: {},
+      },
   
       // 🔹 Timestamps
       createdAt: { type: Date, default: Date.now },

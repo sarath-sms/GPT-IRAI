@@ -1,32 +1,59 @@
-import { useEffect, useState } from "react";
+// apps/web/pages/Dashboard.tsx
+
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
+
 import SuperAdminDashboard from "./superAdmin";
 import AdminDashboard from "./admin/AdminDashboard";
 import DriverDashboard from "./driver/DriverDashboard";
 
 export default function EmployeeDashboard() {
   const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
 
+  // ⭐ Get global authenticated user
+  const { user, token, role, ready } = useAuth();
+
+  // -----------------------------------------
+  // ACCESS CONTROL
+  // -----------------------------------------
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    const token = localStorage.getItem("token");
+    if (!ready) return; // wait until hydration complete
 
-    if (!storedUser || !token) {
-      navigate("/"); // Customer login page
+    // If not logged in → go to landing
+    if (!user || !token) {
+      navigate("/", { replace: true });
       return;
     }
 
-    setUser(JSON.parse(storedUser));
-  }, [navigate]);
+    // Customers not allowed here
+    if (role === "customer") {
+      navigate("/", { replace: true });
+      return;
+    }
+  }, [ready, user, token, role]);
 
-  if (!user) return <p>Loading...</p>;
+  // -----------------------------------------
+  // LOADING STATE
+  // -----------------------------------------
+  if (!ready || !user) return <p>Loading...</p>;
 
-  return (
-    <>
-      {user.role === "superadmin" && <SuperAdminDashboard />}
-      {user.role === "admin" && <AdminDashboard />}
-      {user.role === "driver" && <DriverDashboard />}
-    </>
-  );
+  // -----------------------------------------
+  // RENDER CORRECT DASHBOARD
+  // -----------------------------------------
+  switch (role) {
+    case "superadmin":
+      return <SuperAdminDashboard />;
+
+    case "admin":
+      return <AdminDashboard />;
+
+    case "driver":
+      return <DriverDashboard />;
+
+    default:
+      // fallback if something weird happens
+      navigate("/", { replace: true });
+      return null;
+  }
 }

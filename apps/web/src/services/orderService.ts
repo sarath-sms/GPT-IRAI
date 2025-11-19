@@ -13,9 +13,9 @@ export const OrderService = {
 
   getCart: () => JSON.parse(sessionStorage.getItem("iraitchi_cart") || "[]"),
 
-  getUser: () => JSON.parse(localStorage.getItem("iraitchi_user") || "{}"),
+  getUser: () => JSON.parse(localStorage.getItem("user") || "{}"),
 
   setUser: (user: any) => {
-    localStorage.setItem("iraitchi_user", JSON.stringify(user));
+    localStorage.setItem("user", JSON.stringify(user));
   }
 };

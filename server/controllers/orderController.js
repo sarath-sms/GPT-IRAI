@@ -3,108 +3,116 @@ import User from "../models/User.js";
 import Shop from "../models/Shop.js";
 import Product from "../models/Product.js";
 
-// 💰 Helper: Calculate GST (5%)
+// 🔹 GST helper
 const calcGst = (subtotal) => Math.round(subtotal * 0.05);
+
+// 🔹 Zero pad helper
+const two = (n) => (n < 10 ? "0" + n : "" + n);
 
 export const placeOrder = async (req, res) => {
   try {
     const {
-      userId,
-      products,
+      items,
       address,
       deliverySlot,
-      paymentId, // Razorpay or mock
+      paymentId,
+      subtotal,
+      gst,
+      deliveryFee,
+      total,
+      pincode,
     } = req.body;
 
-    if (!userId || !products?.length || !deliverySlot) {
+    const userId = req.user._id;
+
+    if (!items?.length || !deliverySlot) {
       return res.status(400).json({ msg: "Missing required fields" });
     }
 
+    // ⭐ 1. Fetch user
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ msg: "User not found" });
 
-    // 🏪 Find shop by pincode
+    // ⭐ 2. Update user address always (your requirement #1)
+    user.address = address;
+    user.geo = address.geo;
+    user.pincode = pincode || user.pincode;
+    await user.save();
+
+    // ⭐ 3. Shop detection using pincode
     const shop = await Shop.findOne({ pincode: user.pincode });
+    if (!shop) return res.status(404).json({ msg: "No shop found for this pincode" });
 
-    // 🧾 Calculate totals
-    let subtotal = 0;
-    const orderItems = [];
+    // ⭐ 4. Generate ORDER ID → YYYYMMDDXXXX
+    const now = new Date();
+    const year = now.getFullYear().toString();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
 
-    for (const item of products) {
-      const product = await Product.findById(item.id);
+    const dateKey = `${year}${month}${day}`; // 20250919
 
-      if (!product) continue; // skip invalid product
+    // Count today's orders
+    const todaysCount = await Order.countDocuments({
+      createdAt: {
+        $gte: new Date(`${year}-${month}-${day}T00:00:00`),
+        $lt: new Date(`${year}-${month}-${day}T23:59:59`)
+      },
+      shop: shop._id
+    });
 
-      let unitPrice = 0;
+    const orderNumber = String(todaysCount + 1).padStart(4, "0"); // 0001
+    const orderId = `${dateKey}${orderNumber}`; // 202509190001
 
-      // Category 1 style (fish - with size & cut)
-      if (product.priceOptions?.length > 0) {
-        const sizePrice =
-          product.priceOptions.find((opt) => opt.type === item.size)?.price || 0;
-        const cutFee =
-          product.cutTypes.find((cut) => cut.type === item.cutType)?.price || 0;
-        unitPrice = sizePrice + cutFee;
-      } else {
-        // Category 2 style (meat - flat price)
-        unitPrice = product.price;
-      }
-
-      const totalPrice = unitPrice * (item.qty || 1);
-      subtotal += totalPrice;
-
-      orderItems.push({
-        product: product._id,
-        name: product.name,
-        category: product.category,
-        image: product.image,
-        size: item.size || "Default",
-        cutType: item.cutType || "Standard",
-        qty: item.qty || 1,
-        unitPrice,
-        totalPrice,
-      });
-    }
-
-    const gst = calcGst(subtotal);
-    const deliveryFee = 38;
-    const total = subtotal + gst + deliveryFee;
-
-    // 🧠 Create order document
+    // ⭐ 5. Create new Order Document
     const newOrder = await Order.create({
-      user: user._id,
-      shop: shop?._id || null,
+      orderId,
+      user: userId,
+      shop: shop._id,
       pincode: user.pincode,
-      items: orderItems,
+      items,
       subtotal,
       gst,
       deliveryFee,
       total,
       deliverySlot,
-      address,
       paymentId,
       status: paymentId ? "paid" : "pending",
+      address,
     });
 
-    // 🔗 Add order reference to user
+    // ⭐ 6. Attach order to shop structured storage
+    const y = year;
+    const m = month;
+    const d = day;
+
+    if (!shop.orderTree) shop.orderTree = {};
+
+    if (!shop.orderTree[y]) shop.orderTree[y] = {};
+    if (!shop.orderTree[y][m]) shop.orderTree[y][m] = {};
+    if (!shop.orderTree[y][m][d]) shop.orderTree[y][m][d] = [];
+    
+    shop.orderTree[y][m][d].push({
+      orderId,
+      orderRef: newOrder._id,
+      createdAt: new Date(),
+    });
+
+    await shop.save();
+
+    // ⭐ 7. Add reference to user also
     await User.updateOne(
-      { _id: user._id },
+      { _id: userId },
       { $addToSet: { orders: newOrder._id } }
     );
 
-    // 🔗 Add to shop analytics (optional)
-    if (shop) {
-      await Shop.updateOne(
-        { _id: shop._id },
-        { $addToSet: { orders: newOrder._id } }
-      );
-    }
-
-    res.status(201).json({
+    return res.status(201).json({
       msg: "Order placed successfully!",
       order: newOrder,
     });
+
   } catch (error) {
     console.error("❌ placeOrder error:", error);
-    res.status(500).json({ msg: "Server error", error: error.message });
+    return res.status(500).json({ msg: "Server error", error: error.message });
   }
 };
+

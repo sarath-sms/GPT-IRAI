@@ -8,11 +8,13 @@ import { useNavigate } from "react-router-dom";
 import BackButton from "@/components/BackButton";
 import CartItemCard from "@/components/cart/CartItemCard";
 import AddressSection from "@/components/cart/AddressSection";
-import LocationSection from "@/components/cart/LocationSection";
+import LocationSection from "@/components/LocationSection";
 import SlotSelector from "@/components/cart/SlotSelector";
 import OrderSummary from "@/components/cart/OrderSummary";
 
 import { OrderService } from "../services/orderService";
+import { apiHandler } from "@/utils/apiHandler";
+import { useAuth } from "@/context/AuthContext";
 
 const Wrapper = styled.main`
   min-height: 100vh;
@@ -24,6 +26,12 @@ const Wrapper = styled.main`
 
 const Section = styled.section`
   margin-bottom: ${({ theme }) => theme.spacing(8)};
+  .leaflet-marker-icon, .leaflet-top, .leaflet-marker-pane, .leaflet-pane {
+    z-index: 1;
+  }
+  .leaflet-bottom {
+    display: none;
+  }
 `;
 
 const Title = styled.h2`
@@ -78,6 +86,58 @@ const Modal = styled.div`
   }
 `;
 
+// footer button
+const PayFooter = styled.div`
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+
+  background: ${({ theme }) => theme.colors.secondary};
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+
+  z-index: 22;
+
+  @media (min-width: 768px) {
+    max-width: 700px;
+    margin: 0 auto;
+    left: 0;
+    right: 0;
+  }
+`;
+
+const PayButton = styled(motion.button)`
+  background-color: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.secondary};
+  font-weight: 700;
+  border: none;
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 1rem;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+`;
+
+const StickyFooter = styled.div`
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px;
+  background: ${({ theme }) => theme.colors.secondary};
+  border-top: 1px solid rgba(255,255,255,0.1);
+  z-index: 40;
+
+  /* shadow for better visual separation */
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.4);
+`;
+
 export default function Cart() {
   const navigate = useNavigate();
 
@@ -85,9 +145,7 @@ export default function Cart() {
     () => JSON.parse(sessionStorage.getItem("iraitchi_cart") || "[]")
   );
 
-  const [user, setUser] = useState<any>(() =>
-    JSON.parse(localStorage.getItem("user") || "{}")
-  );
+  const {user, updateUser} = useAuth()
 
   const [geo, setGeo] = useState(user.geo || null);
   const [address, setAddress] = useState(
@@ -168,28 +226,9 @@ export default function Cart() {
     setAddress(updatedAddress);
 
     const updatedUser = { ...user, address: updatedAddress };
-    setUser(updatedUser);
-
-    localStorage.setItem("iraitchi_user", JSON.stringify(updatedUser));
+    updateUser(updatedUser);
   };
 
-  // -------------------------
-  // Location handler
-  // -------------------------
-  const getLocation = () => {
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const newGeo = { lat: pos.coords.latitude, long: pos.coords.longitude };
-        setGeo(newGeo);
-
-        const updatedUser = { ...user, geo: newGeo };
-        setUser(updatedUser);
-
-        localStorage.setItem("iraitchi_user", JSON.stringify(updatedUser));
-      },
-      () => alert("Location access denied!")
-    );
-  };
 
   // -------------------------
   // Price Calculations
@@ -219,7 +258,7 @@ export default function Cart() {
   // Build Order Payload
   // -------------------------
   const buildOrderPayload = () => {
-    const userId = user?._id || user.id || "usr-temp";
+    // const userId = user?._id || user.id || "usr-temp";
 
     const items = cart.map((item) => {
       const unitPrice = Number(item.unitPrice ?? item.price ?? 0) || 0;
@@ -240,7 +279,7 @@ export default function Cart() {
     });
 
     return {
-      user: userId,
+      // user: userId,
       pincode: user?.pincode ?? "",
       items,
       subtotal,
@@ -269,24 +308,30 @@ export default function Cart() {
 
   const confirmJson = () => setJsonConfirmed(true);
 
-  const confirmPayment = () => {
+  const confirmPayment = async () => {
     if (!pendingOrder) return;
-
-    OrderService.addOrder({
-      ...pendingOrder,
-      createdAt: new Date().toISOString(),
-      status: "pending",
-      orderId: "ORD" + Math.floor(1000 + Math.random() * 9000),
-    });
-
-    OrderService.clearCart?.();
-    localStorage.removeItem("iraitchi_cart");
-
-    setCart([]);
-    setJsonPreviewOpen(false);
-
-    navigate("/order-success");
+  
+    try {
+      // Hit backend
+      const res = await apiHandler.post("/api/user/order", pendingOrder);
+      console.log(res, "🔥 order placed")
+      if(res?.order) {
+        // Clear cart
+        OrderService.clearCart?.();
+        sessionStorage.removeItem("iraitchi_cart");
+        
+        // Navigate success page
+        navigate("/order-success", { replace: true });
+      }
+  
+    } catch (err) {
+      console.error("Order failed:", err);
+  
+      // Navigate failed page
+      navigate("/order-failed", { replace: true });
+    }
   };
+  
 
   // -------------------------
   // Render
@@ -311,7 +356,8 @@ export default function Cart() {
       {/* LOCATION */}
       <Section>
         <Title>📍 Delivery Location</Title>
-        <LocationSection geo={geo} onGetLocation={getLocation} />
+        {/* <LocationSection geo={geo} setGeo={setGeo} user={user} setUser={setUser} /> */}
+        <LocationSection />
       </Section>
 
       {/* ADDRESS */}
@@ -356,15 +402,19 @@ export default function Cart() {
           </span>
         </label>
       </Section>
-
+        <div style={{height: "50px"}}></div>
       {/* Pay Button */}
-      <Button
-        whileTap={{ scale: canPay ? 0.97 : 1 }}
-        disabled={!canPay}
-        onClick={onPayClick}
-      >
-        Review Order & Pay ₹{total.toFixed(2)}
-      </Button>
+      <StickyFooter>
+        <PayFooter>
+          <PayButton
+            whileTap={{ scale: canPay ? 0.95 : 1 }}
+            disabled={!canPay}
+            onClick={onPayClick}
+          >
+            Review Order & Pay ₹{total.toFixed(2)}
+          </PayButton>
+        </PayFooter>
+      </StickyFooter>
 
       {/* JSON Preview */}
       <AnimatePresence>

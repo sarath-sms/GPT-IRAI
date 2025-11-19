@@ -55,10 +55,10 @@ const Button = styled.button`
 
 export default function Profile() {
   const { showToast } = useToast();
-  const { user: authUser, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const navigate = useNavigate();
 
-  const [user, setUser] = useState<any | null>(null);
+  // const [user, setUser] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [address, setAddress] = useState({ houseId: "", addr1: "", addr2: "" });
@@ -69,13 +69,12 @@ export default function Profile() {
       try {
         // fetch server profile if token available
         const data = await apiHandler.get("/api/user/profile");
-        setUser(data.user || data);
+        updateUser(data.user || data);
         // hydrate address if present
         setAddress(data.user?.address || data?.address || { houseId: "", addr1: "", addr2: "" });
       } catch (err: any) {
+        console.log(err, "getting error on profile");
         // If server fails (e.g. not logged in yet), fallback to localStorage user
-        const local = localStorage.getItem("iraitchi_user");
-        if (local) setUser(JSON.parse(local));
       } finally {
         setLoading(false);
       }
@@ -87,8 +86,7 @@ export default function Profile() {
     try {
       const payload = { address };
       const res = await apiHandler.patch("/api/user/profile", payload);
-      setUser(res.user || res);
-      localStorage.setItem("iraitchi_user", JSON.stringify(res.user || res));
+      updateUser(res.profile || res);
       showToast("Profile updated", "success");
       setEditing(false);
     } catch (err: any) {

@@ -2,6 +2,7 @@ import styled from 'styled-components';
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import BackButton from '../components/BackButton';
+import { useAuth } from '@/context/AuthContext';
 
 const Wrapper = styled.main`
   background-color: ${({ theme }) => theme.colors.secondary};
@@ -95,15 +96,14 @@ const TopBar = styled.div`
 `;
 
 export default function Invoice() {
-  const [user, setUser] = useState<any>(null);
   const [order, setOrder] = useState<any>(null);
-
+  const {user, updateUser} = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('iraitchi_user');
-    if (storedUser) setUser(JSON.parse(storedUser));
+    const storedUser = {...user};
+    if (storedUser) updateUser(storedUser);
 
     const allOrders = JSON.parse(localStorage.getItem('iraitchi_orders') || '[]');
     const selectedOrder = allOrders.find((o: any) => o.id === id);

@@ -78,9 +78,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const role = user?.role || "customer";
 
+  const updateUser = useCallback((changes: Partial<UserType>) => {
+    setUser((prev) => {
+      const updated = { ...prev, ...changes };
+      localStorage.setItem("user", JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
   const value = useMemo(
-    () => ({ user, token, role, ready, login, logout }),
-    [user, token, role, ready, login, logout]
+    () => ({ user, token, role, ready, login, logout, updateUser }),
+    [user, token, role, ready, login, logout, updateUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

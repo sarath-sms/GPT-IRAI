@@ -46,9 +46,9 @@ const Input = styled.input`
 `;
 
 const Button = styled(motion.button)<{ disabled?: boolean }>`
-  margin-top: ${({ theme }) => theme.spacing(6)};
+  margin-top: ${({ theme }) => theme.spacing(5)};
   background: ${({ theme, disabled }) =>
-    disabled ? "rgba(255,255,255,0.12)" : theme.colors.primary};
+    disabled ? "rgba(255,255,255,0.15)" : theme.colors.primary};
   color: ${({ theme }) => theme.colors.secondary};
   font-weight: 600;
   font-size: 1rem;
@@ -58,24 +58,28 @@ const Button = styled(motion.button)<{ disabled?: boolean }>`
   cursor: ${({ disabled }) => (disabled ? "not-allowed" : "pointer")};
 `;
 
-const SmallAnchor = styled.p`
-  margin-top: ${({ theme }) => theme.spacing(4)};
-  color: ${({ theme }) => theme.colors.mutedText};
-  font-size: 0.95rem;
+const ResendText = styled.p`
+  margin-top: ${({ theme }) => theme.spacing(3)};
+  color: ${({ theme }) => theme.colors.primary};
+  font-size: 0.9rem;
   cursor: pointer;
   text-decoration: underline;
 `;
 
 export default function AuthFlow() {
-  console.log("🔥")
   const [step, setStep] = useState<"form" | "otp">("form");
   const [pincode, setPincode] = useState("");
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
+
   const [otp, setOtp] = useState("");
+
+  // resend OTP state
+  const [showResend, setShowResend] = useState(false);
+  const [timer, setTimer] = useState(300); // 5 min = 300 sec
+
   const [showEmployeeModal, setShowEmployeeModal] = useState(false);
   const { login, user, ready } = useAuth();
-
   const navigate = useNavigate();
   const { showToast } = useToast();
 
@@ -85,24 +89,57 @@ export default function AuthFlow() {
     }
   }, [ready, user]);
 
-  // -----------------------------------
-  // STEP 1 → SEND OTP
-  // -----------------------------------
+  // -------------------------
+  // AUTO TIMER for resend OTP
+  // -------------------------
+  useEffect(() => {
+    if (step !== "otp") return;
+
+    // Resend link appears only after 10 seconds
+    const showTimer = setTimeout(() => setShowResend(true), 10000);
+
+    // 5-minute countdown
+    const interval = setInterval(() => {
+      setTimer((sec) => {
+        if (sec <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return sec - 1;
+      });
+    }, 1000);
+
+    return () => {
+      clearTimeout(showTimer);
+      clearInterval(interval);
+    };
+  }, [step]);
+
+  // -------------------------
+  // STEP 1: SEND OTP
+  // -------------------------
   const handleProceed = async () => {
-    if (!pincode || !name || mobile.length !== 10) return;
+    if (!pincode || !name || mobile.length !== 10) {
+      return showToast("Fill all fields correctly", "error");
+    }
 
     try {
       await apiHandler.post("/api/user/entry", { name, mobile, pincode });
-      setStep("otp");
       showToast("OTP sent!", "success");
-    } catch (err) {
-      showToast(err, "error");
+
+      setStep("otp");
+      setTimer(300);
+      setShowResend(false);
+
+      autoReadOtp(); // start OTP auto-read
+    } catch (err: any) {
+      showToast(err?.message || "Failed", "error");
     }
   };
 
-  // -----------------------------------
-  // STEP 2 → VERIFY OTP
-  // -----------------------------------
+  // -------------------------
+  // STEP 2: VERIFY OTP
+  // -------------------------
   const handleVerify = async () => {
     if (otp.length < 4) return;
 
@@ -115,15 +152,63 @@ export default function AuthFlow() {
       const profile = res?.profile;
       const token = res?.token;
 
-      // ⭐ GLOBAL AUTH CONTEXT LOGIN
       login(profile, token);
 
       showToast("Welcome to Iraitchi!", "success");
       navigate("/products", { replace: true });
-    } catch (err) {
-      showToast(err, "error");
+    } catch (err: any) {
+      showToast(err?.message || "Invalid OTP", "error");
     }
   };
+
+  // -------------------------
+  // RESEND OTP
+  // -------------------------
+  const resendOTP = async () => {
+    try {
+      await apiHandler.post("/api/user/entry", { name, mobile, pincode });
+      showToast("OTP resent!", "success");
+
+      setTimer(300);
+      setShowResend(false);
+
+      autoReadOtp();
+    } catch (err: any) {
+      showToast("Failed to resend", "error");
+    }
+  };
+
+  // -------------------------
+  // AUTO READ OTP (Web OTP API)
+  // -------------------------
+  const autoReadOtp = async () => {
+    try {
+      if ("OTPCredential" in window) {
+        // @ts-ignore
+        const ac = new AbortController();
+
+        setTimeout(() => ac.abort(), 60000); // auto stop after 60 sec
+
+        // @ts-ignore
+        const content = await navigator.credentials.get({
+          otp: { transport: ["sms"] },
+          signal: ac.signal,
+        });
+
+        // @ts-ignore
+        if (content?.code) {
+          setOtp(content.code.toString());
+          handleVerify();
+        }
+      }
+    } catch {
+      // silently ignore (not supported)
+    }
+  };
+
+  // Format timer as mm:ss
+  const mm = String(Math.floor(timer / 60)).padStart(2, "0");
+  const ss = String(timer % 60).padStart(2, "0");
 
   return (
     <Wrapper>
@@ -135,7 +220,7 @@ export default function AuthFlow() {
         Welcome to Iraitchi 🐟
       </Title>
 
-      {/* STEP 1: CUSTOMER ENTRY */}
+      {/* FORM STEP */}
       {step === "form" && (
         <InputGroup>
           <Input
@@ -156,13 +241,13 @@ export default function AuthFlow() {
             }
           />
 
-          <Button whileTap={{ scale: 0.98 }} onClick={handleProceed}>
+          <Button whileTap={{ scale: 0.97 }} onClick={handleProceed}>
             Proceed
           </Button>
         </InputGroup>
       )}
 
-      {/* STEP 2: OTP SCREEN */}
+      {/* OTP STEP */}
       {step === "otp" && (
         <InputGroup>
           <Input
@@ -172,16 +257,35 @@ export default function AuthFlow() {
               setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
             }
           />
-          <Button whileTap={{ scale: 0.98 }} onClick={handleVerify}>
+
+          {/* Countdown */}
+          <p style={{ color: "#BFC6DC" }}>OTP expires in: {mm}:{ss}</p>
+
+          <Button whileTap={{ scale: 0.97 }} onClick={handleVerify}>
             Verify OTP
           </Button>
+
+          {/* RESEND AFTER 10 SECONDS */}
+          {showResend && (
+            <ResendText onClick={resendOTP}>Resend OTP</ResendText>
+          )}
         </InputGroup>
       )}
 
-      <SmallAnchor onClick={() => setShowEmployeeModal(true)}>
+      <p
+        onClick={() => setShowEmployeeModal(true)}
+        style={{
+          marginTop: 20,
+          color: "#BFC6DC",
+          fontSize: "0.95rem",
+          cursor: "pointer",
+          textDecoration: "underline",
+        }}
+      >
         Are you our employee?
-      </SmallAnchor>
+      </p>
 
+      {/* Employee Login */}
       <EmployeeLoginModal
         isOpen={showEmployeeModal}
         onClose={() => setShowEmployeeModal(false)}

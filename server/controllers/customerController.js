@@ -22,8 +22,8 @@ export const checkMobNo = async (req, res) => {
 
     // 🏪 find shop by pincode
     const shop = await Shop.findOne({ pincode });
-    if (!shop) return res.status(404).json({ msg: "Service not available in your area" });
-    if (!shop.isOpen) return res.status(403).json({ msg: "Shop temporarily closed" });
+    if (!shop) return res.status(404).json({ msg: "Service not available in your area", shop: false });
+    if (!shop.isOpen) return res.status(403).json({ msg: "Shop temporarily closed", open: false });
 
     // 👤 find or create user
     let user = await User.findOne({ mobile });
