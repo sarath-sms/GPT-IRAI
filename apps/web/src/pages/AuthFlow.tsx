@@ -124,8 +124,12 @@ export default function AuthFlow() {
     }
 
     try {
-      await apiHandler.post("/api/user/entry", { name, mobile, pincode });
-      showToast("OTP sent!", "success");
+      let res = await apiHandler.post("/api/user/entry", { name, mobile, pincode });
+      if(res?.status === "waitlisted") {
+        return navigate('/waitlisted')
+      }else {
+        showToast("OTP sent!", "success");
+      }
 
       setStep("otp");
       setTimer(300);
@@ -153,7 +157,9 @@ export default function AuthFlow() {
       const token = res?.token;
 
       login(profile, token);
-
+      if(res?.status === "waitlisted") {
+        return navigate('/waitlisted')
+      }
       showToast("Welcome to Iraitchi!", "success");
       navigate("/products", { replace: true });
     } catch (err: any) {
@@ -166,7 +172,10 @@ export default function AuthFlow() {
   // -------------------------
   const resendOTP = async () => {
     try {
-      await apiHandler.post("/api/user/entry", { name, mobile, pincode });
+      let res = await apiHandler.post("/api/user/entry", { name, mobile, pincode });
+      if(res?.status === "waitlisted") {
+        return navigate('/waitlisted')
+      }
       showToast("OTP resent!", "success");
 
       setTimer(300);
@@ -226,6 +235,7 @@ export default function AuthFlow() {
           <Input
             placeholder="Enter Pincode"
             value={pincode}
+            maxLength={6}
             onChange={(e) => setPincode(e.target.value)}
           />
           <Input
@@ -236,6 +246,7 @@ export default function AuthFlow() {
           <Input
             placeholder="Enter Mobile"
             value={mobile}
+            maxLength={10}
             onChange={(e) =>
               setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))
             }

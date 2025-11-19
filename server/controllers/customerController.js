@@ -1,5 +1,6 @@
 import User from "../models/User.js";
 import Shop from "../models/Shop.js";
+import Waitlist from "../models/Waitlist.js";
 import { sendOtp } from "../utils/sendOtp.js";
 import jwt from "jsonwebtoken";
 
@@ -13,23 +14,40 @@ export const checkMobNo = async (req, res) => {
   try {
     const { name, mobile, pincode } = req.body;
 
-    if (!/^\d{10}$/.test(mobile)) {
+    if (!name || !mobile || !pincode)
+      return res.status(400).json({ msg: "Missing required fields" });
+
+    if (!/^\d{10}$/.test(mobile))
       return res.status(400).json({ msg: "Invalid Mobile Number" });
+
+    // 🏪 Check shop availability
+    const shop = await Shop.findOne({ pincode });
+
+    // ❌ No Shop → Add to WAITLIST
+    if (!shop) {
+      await Waitlist.create({ name, mobile, pincode });
+      return res.status(200).json({
+        msg: "🙏 We will open soon in your area!",
+        status: "waitlisted",
+      });
     }
 
+    // ⛔ If shop exists but closed
+    if (!shop.isOpen)
+      return res.status(403).json({
+        msg: "Shop temporarily closed",
+        status: "closed",
+      });
+
+    // HERE WE PROCEED WITH OTP FLOW ⬇️
+
     const otp = generateOtp();
-    const expiryTime = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+    const expiryTime = new Date(Date.now() + 10 * 60 * 1000);
 
-    // 🏪 find shop by pincode
-    const shop = await Shop.findOne({ pincode });
-    if (!shop) return res.status(404).json({ msg: "Service not available in your area", shop: false });
-    if (!shop.isOpen) return res.status(403).json({ msg: "Shop temporarily closed", open: false });
-
-    // 👤 find or create user
     let user = await User.findOne({ mobile });
     if (user) {
       user.verify = { code: otp, expiryTime };
-      if (!user.pincode) user.pincode = pincode;
+      user.pincode = pincode;   // always update to latest pincode 💎
       await user.save();
     } else {
       user = await User.create({
@@ -42,23 +60,22 @@ export const checkMobNo = async (req, res) => {
       });
     }
 
-    // 🔗 link user to shop.customers
-    await Shop.updateOne({ _id: shop._id }, { $addToSet: { customers: user._id } });
+    await Shop.updateOne(
+      { _id: shop._id },
+      { $addToSet: { customers: user._id } }
+    );
 
-    // 📲 send OTP
-    // const otpSent = await sendOtp(otp, mobile);
-    // if (!otpSent) return res.status(500).json({ msg: "Failed to send OTP" });
-
-    res.status(200).json({
+    return res.status(200).json({
       msg: "OTP sent successfully!",
+      status: "otp",
       data: {
-        otp,
-        name: user.name,
-        mobile: user.mobile,
-        pincode: user.pincode,
-        shop: { id: shop._id, name: shop.name },
+        otp, // remove in production
+        mobile,
+        name,
+        pincode,
       },
     });
+
   } catch (error) {
     console.error("❌ Error in checkMobNo:", error);
     res.status(500).json({ msg: "Server error", error: error.message });
