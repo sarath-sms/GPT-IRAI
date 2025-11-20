@@ -17,6 +17,7 @@ import DriverList from "./pages/employee/superAdmin/DriverList";
 import ProductList from "./pages/employee/superAdmin/ProductList";
 import ShopList from "./pages/employee/superAdmin/ShopList";
 import CustomerProtected from "./routes/CustomerProtected";
+import AvailableShops from "./pages/AvailableShops";
 
 export default function App() {
   const { user, role, ready } = useAuth();
@@ -74,6 +75,10 @@ console.log(user, role)
             </EmployeeProtected>
           }
         />
+        <Route
+      path="/commingsoon"
+      element={<AvailableShops />}
+    />
 
         {/* CUSTOMER FLOW */}
         {!isCustomer ? (

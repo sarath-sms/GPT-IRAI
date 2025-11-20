@@ -126,7 +126,7 @@ export default function AuthFlow() {
     try {
       let res = await apiHandler.post("/api/user/entry", { name, mobile, pincode });
       if(res?.status === "waitlisted") {
-        return navigate('/waitlisted')
+        return navigate('/commingsoon')
       }else {
         showToast("OTP sent!", "success");
       }
@@ -158,7 +158,7 @@ export default function AuthFlow() {
 
       login(profile, token);
       if(res?.status === "waitlisted") {
-        return navigate('/waitlisted')
+        return navigate('/commingsoon')
       }
       showToast("Welcome to Iraitchi!", "success");
       navigate("/products", { replace: true });
@@ -174,7 +174,7 @@ export default function AuthFlow() {
     try {
       let res = await apiHandler.post("/api/user/entry", { name, mobile, pincode });
       if(res?.status === "waitlisted") {
-        return navigate('/waitlisted')
+        return navigate('/commingsoon')
       }
       showToast("OTP resent!", "success");
 
