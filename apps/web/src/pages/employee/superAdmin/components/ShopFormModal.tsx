@@ -75,8 +75,6 @@ export default function ShopFormModal({ isOpen, onClose, editData, onSaved }: an
   const { showToast } = useToast();
 
   const [loading, setLoading] = useState(false);
-  const [admins, setAdmins] = useState<any[]>([]);
-  const [drivers, setDrivers] = useState<any[]>([]);
 
   const isEditing = !!editData;
 
@@ -87,9 +85,6 @@ export default function ShopFormModal({ isOpen, onClose, editData, onSaved }: an
     openTime: "",
     closeTime: "",
     isOpen: true,
-
-    adminIds: [] as string[],
-    driverIds: [] as string[],
   });
 
   // ---------------- PREFILL FOR EDIT ------------------
@@ -102,40 +97,12 @@ export default function ShopFormModal({ isOpen, onClose, editData, onSaved }: an
         openTime: editData.openTime || "",
         closeTime: editData.closeTime || "",
         isOpen: editData.isOpen ?? true,
-
-        // ⭐ FIX: PRE-SELECT ADMINS & DRIVERS
-        adminIds: (editData.admins || []).map((a: any) => a._id || a),
-driverIds: (editData.drivers || []).map((d: any) => d._id || d),
       });
     }
   }, [editData]);
 
-  // ---------------- LOAD ADMINS + DRIVERS ----------------
-  useEffect(() => {
-    (async () => {
-      try {
-        const adminRes = await apiHandler.get("/api/superadmin/admins");
-        const driverRes = await apiHandler.get("/api/superadmin/drivers");
-
-        setAdmins(adminRes?.admins || []);
-        setDrivers(driverRes?.drivers || []);
-      } catch (err) {
-        showToast("Failed to load admins/drivers", "error");
-      }
-    })();
-  }, []);
-
   const handleForm = (key: string, val: any) => {
     setForm((p) => ({ ...p, [key]: val }));
-  };
-
-  // Toggle selection for admin/driver
-  const toggleSelect = (listName: "adminIds" | "driverIds", id: string) => {
-    setForm((p) => {
-      const exists = p[listName].includes(id);
-      const updated = exists ? p[listName].filter((x) => x !== id) : [...p[listName], id];
-      return { ...p, [listName]: updated };
-    });
   };
 
   // ---------------- SUBMIT ----------------
@@ -151,9 +118,6 @@ driverIds: (editData.drivers || []).map((d: any) => d._id || d),
       openTime: form.openTime,
       closeTime: form.closeTime,
       isOpen: form.isOpen,
-
-      adminIds: form.adminIds,
-      driverIds: form.driverIds,
     };
 
     try {
@@ -161,14 +125,6 @@ driverIds: (editData.drivers || []).map((d: any) => d._id || d),
 
       if (isEditing) {
         await apiHandler.patch(`/api/superadmin/shops/${editData._id}`, payload);
-        await apiHandler.post("/api/superadmin/shops/link-admins", {
-          shopId: editData._id,
-          adminIds: form.adminIds,
-        });
-        await apiHandler.post("/api/superadmin/shops/link-drivers", {
-          shopId: editData._id,
-          driverIds: form.driverIds,
-        });
 
         showToast("Shop updated!", "success");
       } else {
@@ -237,36 +193,6 @@ driverIds: (editData.drivers || []).map((d: any) => d._id || d),
               />
               <span>Shop Open</span>
             </Row>
-
-            {/* ---------------- ADMINS ---------------- */}
-            <h3 style={{ marginTop: "1rem", marginBottom: "0.5rem" }}>Assign Admins</h3>
-            {admins.length === 0 && <p>No admins available</p>}
-
-            {admins.map((a) => (
-              <Row key={a._id}>
-                <input
-                  type="checkbox"
-                  checked={form.adminIds.includes(a._id)}
-                  onChange={() => toggleSelect("adminIds", a._id)}
-                />
-                <span>{a.name} ({a.mobile})</span>
-              </Row>
-            ))}
-
-            {/* ---------------- DRIVERS ---------------- */}
-            <h3 style={{ marginTop: "1rem", marginBottom: "0.5rem" }}>Assign Drivers</h3>
-            {drivers.length === 0 && <p>No drivers available</p>}
-
-            {drivers.map((d) => (
-              <Row key={d._id}>
-                <input
-                  type="checkbox"
-                  checked={form.driverIds.includes(d._id)}
-                  onChange={() => toggleSelect("driverIds", d._id)}
-                />
-                <span>{d.name} ({d.mobile})</span>
-              </Row>
-            ))}
 
             <SubmitBtn disabled={loading} onClick={handleSubmit}>
               {loading ? "Saving..." : isEditing ? "Update Shop" : "Add Shop"}

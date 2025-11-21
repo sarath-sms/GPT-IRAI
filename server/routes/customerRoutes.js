@@ -1,5 +1,5 @@
 import express from "express";
-import { checkMobNo, checkOtp, getProfile, updateProfile } from "../controllers/customerController.js";
+import { checkMobNo, checkOtp, getAvailableShops, getProfile, updateProfile } from "../controllers/customerController.js";
 import { placeOrder } from "../controllers/orderController.js";
 import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
 
@@ -12,6 +12,7 @@ router.post("/verify", checkOtp);
 router.get("/profile", protect, authorizeRoles("customer"), getProfile);
 router.put("/profile", protect, authorizeRoles("customer"), updateProfile);
 // 🔹 Orders (protected)
+router.get("/shops", getAvailableShops);
 router.post("/order", protect, authorizeRoles("customer"), placeOrder);
 
 export default router;

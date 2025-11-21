@@ -8,7 +8,6 @@ const generateToken = (id, role) =>
 
 // 🔹 POST /api/admin/create — Create first super admin
 export const createSuperAdmin = async (req, res) => {
-    console.log("✅woo")
   try {
     const { name, mobile, password } = req.body;
 

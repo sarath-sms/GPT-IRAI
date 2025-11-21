@@ -21,8 +21,6 @@ import {
   updateShop,
   deleteShop,
   toggleShopStatus,
-  linkDriversToShop,
-  linkAdminsToShop,
 } from "../controllers/shopController.js";
 import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
 import { createAdmin, deleteAdmin, getAdmins, updateAdmin } from "../controllers/adminController.js";
@@ -61,11 +59,8 @@ router.patch("/shops/:id", protect, authorizeRoles("superadmin"), updateShop);
 router.delete("/shops/:id", protect, authorizeRoles("superadmin"), deleteShop);
 router.patch("/shops/:id/toggle", protect, authorizeRoles("superadmin"), toggleShopStatus);
 
-// 🔹 Linking
-router.post("/shops/link-drivers", protect, authorizeRoles("superadmin"), linkDriversToShop);
-router.post("/shops/link-admins", protect, authorizeRoles("superadmin"), linkAdminsToShop);
 
-
+ 
 // our actions
 router.get("/dashboard", protect, authorizeRoles("superadmin"), getSuperAdminDashboard);
 

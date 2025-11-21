@@ -19,12 +19,7 @@ export const employeeLogin = async (req, res) => {
 
     res.json({
       msg: "Login successful",
-      user: {
-        id: user._id,
-        name: user.name,
-        mobile: user.mobile,
-        role: user.role,
-      },
+      user,
       token,
     });
   } catch (err) {

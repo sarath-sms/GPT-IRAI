@@ -4,7 +4,7 @@ import User from "../models/User.js";
 // 🔹 Create Shop
 export const createShop = async (req, res) => {
   try {
-    const { pincode, name, description, openTime, closeTime, adminIds = [], driverIds = [] } = req.body;
+    const { pincode, name, description, openTime, closeTime } = req.body;
 
     // Check duplicate pincode
     const existing = await Shop.findOne({ pincode });
@@ -16,8 +16,6 @@ export const createShop = async (req, res) => {
       description,
       openTime,
       closeTime,
-      admins: adminIds,
-      drivers: driverIds
     });
 
     res.status(201).json({ msg: "Shop created successfully", shop });
@@ -30,7 +28,7 @@ export const createShop = async (req, res) => {
 // 🔹 Get All Shops
 export const getAllShops = async (req, res) => {
   try {
-    const shops = await Shop.find().populate("admins drivers", "name mobile role");
+    const shops = await Shop.find()
     res.status(200).json(shops);
   } catch (err) {
     res.status(500).json({ msg: "Server error", error: err.message });
@@ -40,9 +38,7 @@ export const getAllShops = async (req, res) => {
 // 🔹 Get Single Shop by ID
 export const getShopById = async (req, res) => {
   try {
-    const shop = await Shop.findById(req.params.id)
-      .populate("admins", "name mobile role")
-      .populate("drivers", "name mobile role");
+    const shop = await Shop.findById(req.params.id);
 
     if (!shop) return res.status(404).json({ msg: "Shop not found" });
 
@@ -89,69 +85,5 @@ export const toggleShopStatus = async (req, res) => {
   }
 };
 
-// 🔹 Link existing drivers to a shop
-export const linkDriversToShop = async (req, res) => {
-  try {
-    const { shopId, driverIds } = req.body;
 
-    if (!shopId || !driverIds) {
-      return res.status(400).json({ msg: "shopId and driverIds are required" });
-    }
 
-    const shop = await Shop.findById(shopId);
-    if (!shop) return res.status(404).json({ msg: "Shop not found" });
-
-    // Fetch valid driver users
-    const drivers = await User.find({
-      _id: { $in: driverIds },
-      role: "driver",
-    });
-
-    // Update shop side
-    shop.drivers = [...new Set(drivers.map((d) => d._id.toString()))];
-    await shop.save();
-
-    // Update each driver record → assignedShops
-    for (const driver of drivers) {
-      if (!driver.assignedShops) driver.assignedShops = [];
-      if (!driver.assignedShops.includes(shopId)) {
-        driver.assignedShops.push(shopId);
-        await driver.save();
-      }
-    }
-
-    res.json({ msg: "Drivers linked to shop", shop });
-  } catch (error) {
-    console.error("❌ linkDriversToShop error:", error);
-    res.status(500).json({ msg: "Server error", error: error.message });
-  }
-};
-
-// 🔹 Link admins to a shop
-export const linkAdminsToShop = async (req, res) => {
-  try {
-    const { shopId, adminIds } = req.body;
-
-    if (!shopId || !adminIds) {
-      return res.status(400).json({ msg: "shopId and adminIds are required" });
-    }
-
-    const shop = await Shop.findById(shopId);
-    if (!shop) return res.status(404).json({ msg: "Shop not found" });
-
-    // Validate admin role
-    const admins = await User.find({
-      _id: { $in: adminIds },
-      role: "admin",
-    });
-
-    // Update shop
-    shop.admins = [...new Set(admins.map((a) => a._id.toString()))];
-    await shop.save();
-
-    res.json({ msg: "Admins linked to shop", shop });
-  } catch (error) {
-    console.error("❌ linkAdminsToShop error:", error);
-    res.status(500).json({ msg: "Server error", error: error.message });
-  }
-};

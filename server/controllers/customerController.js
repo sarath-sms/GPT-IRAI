@@ -124,6 +124,7 @@ export const checkOtp = async (req, res) => {
           name: user.name,
           mobile: user.mobile,
           pincode: user.pincode,
+          address: user.address,
           shop: shop ? { id: shop._id, name: shop.name } : null,
         },
         token,
@@ -193,5 +194,15 @@ export const updateProfile = async (req, res) => {
   } catch (err) {
     console.log(err);
     res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+export const getAvailableShops = async (req, res) => {
+  try {
+    const shops = await Shop.find({}, { name: 1, pincode: 1, _id: 0 });
+    return res.status(200).json({ msg: "Available service areas", shops });
+  } catch (error) {
+    console.error("❌ Error in getAvailableShops:", error);
+    res.status(500).json({ msg: "Server error", error: error.message });
   }
 };

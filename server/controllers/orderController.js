@@ -116,3 +116,44 @@ export const placeOrder = async (req, res) => {
   }
 };
 
+export const updateOrderStatus = async (req, res) => {
+  try {
+    const { orderId, status } = req.body;
+    const userId = req.user._id;  // admin/driver from protect.ts
+
+    if (!orderId || !status) {
+      return res.status(400).json({ msg: "Order ID & Status are required" });
+    }
+
+    // Allowed status list
+    const allowed = ["pending", "processing", "out-for-delivery", "delivered", "cancelled"];
+    if (!allowed.includes(status)) {
+      return res.status(400).json({ msg: "Invalid status!" });
+    }
+
+    // Find the order
+    const order = await Order.findById(orderId);
+    if (!order) return res.status(404).json({ msg: "Order not found" });
+
+    // Check if this admin/driver is linked to the order’s shop
+    const shop = await Shop.findById(order.shop);
+    const isAdmin = shop.admins?.some(id => id.toString() === userId.toString());
+    const isDriver = shop.drivers?.some(id => id.toString() === userId.toString());
+
+    if (!isAdmin && !isDriver) {
+      return res.status(403).json({ msg: "Not authorized for this order" });
+    }
+
+    // 🔥 Update status
+    order.status = status;
+    // Also assign driver if driver updates to "out-for-delivery"
+    if (isDriver) order.driver = userId;
+    order.save();
+
+    return res.json({ msg: "Order status updated!", order });
+
+  } catch (err) {
+    console.log("❌ updateOrderStatus error:", err);
+    return res.status(500).json({ msg: "Server error", error: err.message });
+  }
+};

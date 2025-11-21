@@ -24,6 +24,7 @@ const OrderItemSchema = new mongoose.Schema(
 // 🔹 Main order schema
 const OrderSchema = new mongoose.Schema(
   {
+    orderId: String,
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     shop: { type: mongoose.Schema.Types.ObjectId, ref: "Shop" }, // optional future link
     pincode: String,
