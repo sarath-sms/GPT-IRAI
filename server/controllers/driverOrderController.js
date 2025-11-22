@@ -1,28 +1,43 @@
 import Order from "../models/Order.js";
 import Driver from "../models/Driver.js";
 
-export const getAssignedOrders = async (req, res) => {
+export const updateDriverOrderStatus = async (req, res) => {
   try {
-    const driver = await Driver.findById(req.user.id).populate({
-      path: "assignedOrders",
-      populate: { path: "user", select: "name mobile" },
-    });
-    res.status(200).json({ msg: "Assigned orders fetched", orders: driver.assignedOrders });
-  } catch (error) {
-    res.status(500).json({ msg: "Error fetching orders", error: error.message });
+    const { orderId, status } = req.body;
+    const driverId = req.user._id;
+
+    if (!["delivered", "cancelled"].includes(status)) {
+      return res.status(400).json({ msg: "Invalid status" });
+    }
+
+    const order = await Order.findOne({ _id: orderId, driver: driverId });
+    if (!order) return res.status(404).json({ msg: "Order not found" });
+
+    order.status = status;
+    await order.save();
+
+    return res.json({ msg: `Order ${status}!` });
+  } catch (err) {
+    console.error("❌ updateDriverOrderStatus:", err);
+    res.status(500).json({ msg: "Server error" });
   }
 };
 
-export const driverUpdateOrderStatus = async (req, res) => {
+export const getDriverOrders = async (req, res) => {
   try {
-    const { status } = req.body;
-    const order = await Order.findByIdAndUpdate(
-      req.params.id,
-      { status },
-      { new: true }
-    );
-    res.status(200).json({ msg: "Order status updated", order });
-  } catch (error) {
-    res.status(500).json({ msg: "Error updating status", error: error.message });
+    const driverId = req.user._id;
+
+    const orders = await Order.find({
+      driver: driverId,
+      status: { $in: ["out-for-delivery", "processing"] }
+    })
+      .populate("user", "name mobile")
+      .populate("shop", "name pincode")
+      .sort({ createdAt: -1 });
+
+    return res.json({ orders });
+  } catch (err) {
+    console.error("❌ getDriverOrders:", err);
+    res.status(500).json({ msg: "Server error" });
   }
 };
